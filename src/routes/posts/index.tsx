@@ -33,14 +33,15 @@ interface Post {
 }
 
 type FilterStatus = "all" | "published" | "scheduled" | "draft";
-type SortBy = "publishDate" | "views" | "likes" | "comments" | "engagement";
+// type SortBy = "publishDate" | "views" | "likes" | "comments" | "engagement";
+// type SortBy = "publishDate" | "views" | "likes" | "comments" | "engagement";
 
 export const Route = createFileRoute("/posts/")({
   component: Posts,
 });
 
 function Posts(): JSX.Element {
-  const [posts, setPosts] = useState<Post[]>([
+  const [posts] = useState<Post[]>([
     {
       id: 1,
       title: "Summer vibes and good times",
@@ -123,11 +124,13 @@ function Posts(): JSX.Element {
     },
   ]);
 
-  const [selectedPosts, setSelectedPosts] = useState<number[]>([]);
+  // const [selectedPosts, setSelectedPosts] = useState<number[]>([]);
+  const [selectedPosts] = useState<number[]>([]);
+
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [sortBy, setSortBy] = useState<SortBy>("publishDate");
-  const [showFilters, setShowFilters] = useState<boolean>(false);
+  // const [sortBy, setSortBy] = useState<SortBy>("publishDate");
+  // const [showFilters, setShowFilters] = useState<boolean>(false);
   const [expandedPost, setExpandedPost] = useState<number | null>(null);
 
   const formatNumber = (num: number): string => {
@@ -158,13 +161,13 @@ function Posts(): JSX.Element {
     return matchesStatus && matchesSearch;
   });
 
-  const togglePostSelection = (postId: number): void => {
-    setSelectedPosts((prev) =>
-      prev.includes(postId)
-        ? prev.filter((id) => id !== postId)
-        : [...prev, postId]
-    );
-  };
+  // const togglePostSelection = (postId: number): void => {
+  //   setSelectedPosts((prev) =>
+  //     prev.includes(postId)
+  //       ? prev.filter((id) => id !== postId)
+  //       : [...prev, postId]
+  //   );
+  // };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">

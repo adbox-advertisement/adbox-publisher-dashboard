@@ -98,6 +98,81 @@ function Index() {
     return num.toString();
   };
 
+  // import { useDashboardAuth } from './DashboardAuthContext';
+
+  // const Dashboard = () => {
+  //   const { user, logout, apiRequest } = useDashboardAuth();
+  //   const [dashboardData, setDashboardData] = useState(null);
+  //   const [loading, setLoading] = useState(true);
+
+  //   useEffect(() => {
+  //     const loadDashboardData = async () => {
+  //       try {
+  //         const response = await apiRequest('/api/dashboard');
+  //         if (response && response.ok) {
+  //           const data = await response.json();
+  //           setDashboardData(data);
+  //         }
+  //       } catch (error) {
+  //         console.error('Failed to load dashboard data:', error);
+  //       } finally {
+  //         setLoading(false);
+  //       }
+  //     };
+
+  //     loadDashboardData();
+  //   }, [apiRequest]);
+
+  //   const handleLogout = () => {
+  //     logout();
+  //   };
+
+  //   if (loading) {
+  //     return (
+  //       <div className="min-h-screen flex items-center justify-center">
+  //         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+  //       </div>
+  //     );
+  //   }
+
+  //   return (
+  //     <div className="min-h-screen bg-gray-100">
+  //       <header className="bg-white shadow">
+  //         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  //           <div className="flex justify-between items-center h-16">
+  //             <h1 className="text-xl font-semibold">Dashboard</h1>
+  //             <div className="flex items-center space-x-4">
+  //               <span className="text-gray-700">Welcome, {user?.name || user?.email}</span>
+  //               <button
+  //                 onClick={handleLogout}
+  //                 className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+  //               >
+  //                 Logout
+  //               </button>
+  //             </div>
+  //           </div>
+  //         </div>
+  //       </header>
+
+  //       {/* Main Content */}
+  //       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+  //         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  //           {/* Dashboard widgets */}
+  //           <div className="bg-white p-6 rounded-lg shadow">
+  //             <h2 className="text-lg font-medium mb-4">Stats</h2>
+  //             <p className="text-3xl font-bold text-blue-600">
+  //               {dashboardData?.stats || 0}
+  //             </p>
+  //           </div>
+
+  //         </div>
+  //       </main>
+  //     </div>
+  //   );
+  // };
+
+  // export default Dashboard;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50">
       <div className="px-4 py-4 space-y-6">

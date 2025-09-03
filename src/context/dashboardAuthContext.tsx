@@ -44,7 +44,7 @@ export const DashboardAuthProvider: React.FC<DashboardAuthProviderProps> = ({
     url: string,
     options: RequestInit = {}
   ): Promise<Response | null> => {
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("token");
 
     const response = await fetch(url, {
       ...options,
@@ -64,34 +64,73 @@ export const DashboardAuthProvider: React.FC<DashboardAuthProviderProps> = ({
   };
 
   const logout = (): void => {
-    localStorage.removeItem("authToken");
+    localStorage.removeItem("token");
     setUser(null);
     setAuthenticated(false);
     window.location.href = "https://adboxgh.com";
   };
 
-  const verifyToken = async (token: string): Promise<boolean> => {
-    try {
-      const response = await fetch("/api/verify-token", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+  // const verifyToken = async (token: string): Promise<boolean> => {
+  //   try {
+  //     const response = await fetch("/api/verify-token", {
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //         "Content-Type": "application/json",
+  //       },
+  //     });
 
-      if (response.ok) {
-        const userData = (await response.json()) as { user: User };
-        setUser(userData.user);
-        setAuthenticated(true);
-        return true;
-      } else {
-        return false;
-      }
-    } catch (error) {
-      console.error("Token verification failed:", error);
-      return false;
-    }
-  };
+  //     if (response.ok) {
+  //       const userData = (await response.json()) as { user: User };
+  //       setUser(userData.user);
+  //       setAuthenticated(true);
+  //       return true;
+  //     } else {
+  //       return false;
+  //     }
+  //   } catch (error) {
+  //     console.error("Token verification failed:", error);
+  //     return false;
+  //   }
+  // };
+
+  // useEffect(() => {
+  //   const initializeAuth = async () => {
+  //     const urlParams = new URLSearchParams(window.location.search);
+  //     const urlToken = urlParams.get("token");
+
+  //     console.log("This is the token : ", urlToken);
+
+  //     let token: string | null = null;
+
+  //     if (urlToken) {
+  //       localStorage.setItem("authToken", urlToken);
+  //       window.history.replaceState(
+  //         {},
+  //         document.title,
+  //         window.location.pathname
+  //       );
+  //       token = urlToken;
+  //     } else {
+  //       token = localStorage.getItem("authToken");
+  //     }
+
+  //     // if (!token) {
+  //     //   window.location.href = "https://adboxgh.com";
+  //     //   return;
+  //     // }
+
+  //     // const isValid = await verifyToken(token);
+
+  //     // if (!isValid) {
+  //     //   localStorage.removeItem("token");
+  //     //   window.location.href = "https://adboxgh.com";
+  //     // }
+
+  //     setLoading(false);
+  //   };
+
+  //   initializeAuth();
+  // }, []);
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -102,26 +141,19 @@ export const DashboardAuthProvider: React.FC<DashboardAuthProviderProps> = ({
 
       if (urlToken) {
         localStorage.setItem("authToken", urlToken);
+
+        // Clean up URL
         window.history.replaceState(
           {},
           document.title,
           window.location.pathname
         );
+
         token = urlToken;
+        console.log("Token from URL: ", token);
       } else {
         token = localStorage.getItem("authToken");
-      }
-
-      if (!token) {
-        window.location.href = "https://adboxgh.com";
-        return;
-      }
-
-      const isValid = await verifyToken(token);
-
-      if (!isValid) {
-        localStorage.removeItem("authToken");
-        window.location.href = "https://adboxgh.com";
+        console.log("Token from localStorage: ", token);
       }
 
       setLoading(false);
@@ -138,9 +170,9 @@ export const DashboardAuthProvider: React.FC<DashboardAuthProviderProps> = ({
     );
   }
 
-  if (!authenticated) {
-    return null;
-  }
+  // if (!authenticated) {
+  //   return null;
+  // }
 
   return (
     <DashboardAuthContext.Provider

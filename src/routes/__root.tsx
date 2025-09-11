@@ -1,5 +1,4 @@
 import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { useState } from "react";
 import {
   FiUpload,
@@ -12,6 +11,7 @@ import {
 } from "react-icons/fi";
 import { HiOutlineWallet } from "react-icons/hi2";
 import { HiOutlineClipboardDocumentList } from "react-icons/hi2";
+import { Toaster } from "sonner";
 export const Route = createRootRoute({
   component: () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -22,6 +22,7 @@ export const Route = createRootRoute({
 
     return (
       <>
+        <Toaster position="bottom-right" richColors />
         <div className="flex min-h-[100vh] max-w-[2000px] mx-auto">
           {/* Mobile Menu Overlay */}
           {isMobileMenuOpen && (
@@ -76,7 +77,7 @@ export const Route = createRootRoute({
                 </div>
                 <Link
                   to="/"
-                  className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border-[1px] border-[#764ba2] rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
+                  className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <FiHome className="w-4 h-4" />
@@ -84,7 +85,7 @@ export const Route = createRootRoute({
                 </Link>
                 <Link
                   to="/posts"
-                  className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border-[1px] border-[#764ba2] rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
+                  className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <FiFileText className="w-4 h-4" />
@@ -93,7 +94,7 @@ export const Route = createRootRoute({
 
                 <Link
                   to="/wallet"
-                  className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border-[1px] border-[#764ba2] rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
+                  className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <HiOutlineWallet className="w-4 h-4" />
@@ -101,7 +102,7 @@ export const Route = createRootRoute({
                 </Link>
                 <Link
                   to="/Campaign"
-                  className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border-[1px] border-[#764ba2] rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
+                  className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <HiOutlineWallet className="w-4 h-4" />
@@ -109,7 +110,7 @@ export const Route = createRootRoute({
                 </Link>
                 <Link
                   to="/survey"
-                  className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border-[1px] border-[#764ba2] rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
+                  className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <HiOutlineClipboardDocumentList className="w-4 h-4" />
@@ -118,7 +119,7 @@ export const Route = createRootRoute({
 
                 <Link
                   to="/comments"
-                  className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border-[1px] border-[#764ba2] rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
+                  className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <FiMessageCircle className="w-4 h-4" />
@@ -126,7 +127,7 @@ export const Route = createRootRoute({
                 </Link>
                 <Link
                   to="/analytics"
-                  className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border-[1px] border-[#764ba2] rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
+                  className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <FiBarChart className="w-4 h-4" />
@@ -185,7 +186,8 @@ export const Route = createRootRoute({
             </div>
           </div>
         </div>
-        <TanStackRouterDevtools />
+
+        {/* <TanStackRouterDevtools /> */}
       </>
     );
   },

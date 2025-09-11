@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef, useCallback } from "react";
-
+import ApiService from "../../helpers/api.service";
+import { toast } from "sonner";
 export const Route = createFileRoute("/upload/")({
   component: VideoUploads,
 });
@@ -11,8 +12,24 @@ function VideoUploads() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [caption, setCaption] = useState("");
+  const [videoTitle, setVideoTitle] = useState("");
+
+  const [videoId, setVideoId] = useState<string | null>(null);
+  // Quiz states
+  const [quizQuestion, setQuizQuestion] = useState("");
+  const [correctAnswer, setCorrectAnswer] = useState("");
+  const [wrongAnswer1, setWrongAnswer1] = useState("");
+  const [wrongAnswer2, setWrongAnswer2] = useState("");
+  const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Check if video upload is complete
+  const isVideoUploadComplete =
+    uploadProgress === 100 && !isUploading && videoId !== null;
+
+  // Drag & Drop Handlers
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -48,27 +65,157 @@ function VideoUploads() {
     }
   };
 
-  const simulateUpload = () => {
+  // Video detail changes
+  const handleCaptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (e.target.value.length <= 2200) {
+      setCaption(e.target.value);
+    }
+  };
+
+  const handleVideoTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.value.length <= 100) {
+      setVideoTitle(e.target.value);
+    }
+  };
+
+  // Quiz input changes
+  const handleQuizQuestionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isVideoUploadComplete) {
+      setQuizQuestion(e.target.value);
+    }
+  };
+
+  const handleCorrectAnswerChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (isVideoUploadComplete) {
+      setCorrectAnswer(e.target.value);
+    }
+  };
+
+  const handleWrongAnswer1Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isVideoUploadComplete) {
+      setWrongAnswer1(e.target.value);
+    }
+  };
+
+  const handleWrongAnswer2Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isVideoUploadComplete) {
+      setWrongAnswer2(e.target.value);
+    }
+  };
+
+  // Upload handler
+  const simulateUpload = async () => {
+    if (!selectedFile) return;
     setIsUploading(true);
     setUploadProgress(0);
 
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          return 100;
+    try {
+      const response = await ApiService.upload_api(
+        "/ffmpeg-video-upload/upload",
+        selectedFile,
+        {
+          title: videoTitle || "Untitled Video",
+          description: caption || "No description provided",
+        },
+        {
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const percentCompleted = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total
+              );
+              setUploadProgress(percentCompleted);
+              if (percentCompleted === 100) {
+                console.log("Upload completed, processing...");
+              }
+            }
+          },
+          timeout: 300000,
+          headers: {
+            "X-Upload-Source": "web-client",
+          },
         }
-        return prev + 10;
-      });
-    }, 200);
+      );
+
+      console.log("Upload successful:", response.data);
+
+      // ✅ Capture videoId from backend response
+      if (response.data?.id) {
+        setVideoId(response.data.id);
+      }
+      toast.success("✅ Video uploaded successfully!");
+      setIsUploading(false);
+    } catch (error: any) {
+      // const message =
+      //   error?.response?.data?.message ||
+      //   error?.message ||
+      //   "Unexpected error during upload";
+
+      toast.error(`❌ Upload failed`);
+      console.error("Upload failed:", error);
+      setIsUploading(false);
+    }
   };
 
+  // Quiz submit handler
+  const submitQuiz = async () => {
+    if (
+      !quizQuestion.trim() ||
+      !correctAnswer.trim() ||
+      !wrongAnswer1.trim() ||
+      !wrongAnswer2.trim()
+    ) {
+      return;
+    }
+
+    if (!videoId) {
+      console.warn("Video ID is missing. Upload video before submitting quiz.");
+      return;
+    }
+
+    console.log("Submitting quiz:", {
+      videoId,
+      quizQuestion,
+      correctAnswer,
+      wrongAnswer1,
+      wrongAnswer2,
+    });
+    setIsSubmittingQuiz(true);
+    try {
+      await ApiService.post_api("/questions/create", {
+        myQuestionResourceId: videoId,
+        text: quizQuestion,
+        correctAnswerText: correctAnswer,
+        wrongAnswerTexts: [wrongAnswer1, wrongAnswer2],
+      });
+      toast.success("✅ Questions uploaded successfully!");
+
+      // reset quiz form
+      setQuizQuestion("");
+      setCorrectAnswer("");
+      setWrongAnswer1("");
+      setWrongAnswer2("");
+    } catch (error: any) {
+      toast.error(`❌ Upload failed`);
+    } finally {
+      setIsSubmittingQuiz(false);
+    }
+  };
+
+  // Reset everything
   const resetUpload = () => {
     setSelectedFile(null);
     setPreviewUrl(null);
     setUploadProgress(0);
     setIsUploading(false);
+    setCaption("");
+    setVideoTitle("");
+    setVideoId(null); // Reset videoId
+    setQuizQuestion("");
+    setCorrectAnswer("");
+    setWrongAnswer1("");
+    setWrongAnswer2("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -206,33 +353,11 @@ function VideoUploads() {
                       </div>
                     </div>
                   )}
-
-                  {uploadProgress === 100 && !isUploading && (
-                    <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg flex items-center">
-                      <svg
-                        className="w-4 h-4 text-green-500 mr-2 flex-shrink-0"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <span className="text-green-700 font-medium text-sm">
-                        Upload complete!
-                      </span>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Video Details Form - Takes 2 columns on xl screens */}
           <div className="xl:col-span-2">
             <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -248,12 +373,16 @@ function VideoUploads() {
                       Caption
                     </label>
                     <textarea
+                      value={caption}
+                      onChange={handleCaptionChange}
                       placeholder="Share more about your video..."
                       className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-[#764ba2] focus:border-transparent transition-colors text-sm"
                       rows={3}
                       maxLength={2200}
                     />
-                    <p className="text-xs text-gray-500 mt-1">0 / 2200</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {caption.length} / 2200
+                    </p>
                   </div>
 
                   {/* Video Title */}
@@ -263,19 +392,54 @@ function VideoUploads() {
                     </label>
                     <input
                       type="text"
+                      value={videoTitle}
+                      onChange={handleVideoTitleChange}
                       placeholder="Give your video a catchy title..."
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#764ba2] focus:border-transparent transition-colors text-sm"
                       maxLength={100}
                     />
-                    <p className="text-xs text-gray-500 mt-1">0 / 100</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {videoTitle.length} / 100
+                    </p>
                   </div>
                 </div>
 
                 {/* Right Column */}
                 <div className="space-y-4">
                   {/* Quiz Section */}
-                  <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                  <div
+                    className={`border border-gray-200 rounded-lg p-4 relative ${!isVideoUploadComplete ? "bg-gray-50" : "bg-white"}`}
+                  >
+                    {/* Overlay for disabled state */}
+                    {!isVideoUploadComplete && (
+                      <div className="absolute inset-0 bg-gray-100 bg-opacity-50 rounded-lg z-10 flex items-center justify-center">
+                        <div className="text-center p-4">
+                          <svg
+                            className="w-8 h-8 text-gray-400 mx-auto mb-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                            />
+                          </svg>
+                          <p className="text-sm font-medium text-gray-600">
+                            Complete video upload first
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Quiz section will be enabled after upload
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <label
+                      className={`block text-sm font-medium mb-3 ${!isVideoUploadComplete ? "text-gray-400" : "text-gray-700"}`}
+                    >
                       Add Quiz Question (Optional)
                     </label>
 
@@ -283,43 +447,151 @@ function VideoUploads() {
                     <div className="mb-3">
                       <input
                         type="text"
+                        value={quizQuestion}
+                        onChange={handleQuizQuestionChange}
                         placeholder="Ask a question about your video..."
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#764ba2] focus:border-transparent transition-colors text-sm"
+                        disabled={!isVideoUploadComplete}
+                        className={`w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#764ba2] focus:border-transparent transition-colors text-sm ${!isVideoUploadComplete ? "bg-gray-100 cursor-not-allowed" : ""}`}
                         maxLength={200}
                       />
-                      <p className="text-xs text-gray-500 mt-1">0 / 200</p>
+                      <p
+                        className={`text-xs mt-1 ${!isVideoUploadComplete ? "text-gray-400" : "text-gray-500"}`}
+                      >
+                        {quizQuestion.length} / 200
+                      </p>
                     </div>
 
                     {/* Answer Options */}
                     <div className="space-y-2">
-                      <p className="text-xs font-medium text-gray-600 mb-2">
+                      <p
+                        className={`text-xs font-medium mb-2 ${!isVideoUploadComplete ? "text-gray-400" : "text-gray-600"}`}
+                      >
                         Answer Options:
                       </p>
-                      {[1, 2, 3].map((optionNum) => (
+
+                      {/* Correct Answer */}
+                      <div className="flex items-center space-x-2">
                         <div
-                          key={optionNum}
-                          className="flex items-center space-x-2"
+                          className={`flex items-center justify-center w-3 h-3 rounded-full flex-shrink-0 ${!isVideoUploadComplete ? "bg-gray-400" : "bg-green-500"}`}
                         >
-                          <input
-                            type="radio"
-                            name="correctAnswer"
-                            value={optionNum}
-                            className="text-[#764ba2] focus:ring-[#764ba2] w-3 h-3 flex-shrink-0"
-                          />
-                          <label className="text-xs text-gray-600 flex-shrink-0">
-                            Correct:
-                          </label>
-                          <input
-                            type="text"
-                            placeholder={`Answer ${optionNum}...`}
-                            className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#764ba2] focus:border-transparent transition-colors text-xs"
-                            maxLength={80}
-                          />
+                          <svg
+                            className="w-2 h-2 text-white"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
                         </div>
-                      ))}
-                      <p className="text-xs text-gray-500 mt-2">
-                        Select the correct answer
-                      </p>
+                        <label
+                          className={`text-xs font-medium flex-shrink-0 ${!isVideoUploadComplete ? "text-gray-400" : "text-green-600"}`}
+                        >
+                          Correct:
+                        </label>
+                        <input
+                          type="text"
+                          value={correctAnswer}
+                          onChange={handleCorrectAnswerChange}
+                          placeholder="Correct answer..."
+                          disabled={!isVideoUploadComplete}
+                          className={`flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#764ba2] focus:border-transparent transition-colors text-xs ${!isVideoUploadComplete ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                          maxLength={80}
+                        />
+                      </div>
+
+                      {/* Wrong Answer 1 */}
+                      <div className="flex items-center space-x-2">
+                        <div
+                          className={`flex items-center justify-center w-3 h-3 rounded-full flex-shrink-0 ${!isVideoUploadComplete ? "bg-gray-400" : "bg-red-500"}`}
+                        >
+                          <svg
+                            className="w-2 h-2 text-white"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </div>
+                        <label
+                          className={`text-xs font-medium flex-shrink-0 ${!isVideoUploadComplete ? "text-gray-400" : "text-red-600"}`}
+                        >
+                          Wrong:
+                        </label>
+                        <input
+                          type="text"
+                          value={wrongAnswer1}
+                          onChange={handleWrongAnswer1Change}
+                          placeholder="Wrong answer 1..."
+                          disabled={!isVideoUploadComplete}
+                          className={`flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#764ba2] focus:border-transparent transition-colors text-xs ${!isVideoUploadComplete ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                          maxLength={80}
+                        />
+                      </div>
+
+                      {/* Wrong Answer 2 */}
+                      <div className="flex items-center space-x-2">
+                        <div
+                          className={`flex items-center justify-center w-3 h-3 rounded-full flex-shrink-0 ${!isVideoUploadComplete ? "bg-gray-400" : "bg-red-500"}`}
+                        >
+                          <svg
+                            className="w-2 h-2 text-white"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </div>
+                        <label
+                          className={`text-xs font-medium flex-shrink-0 ${!isVideoUploadComplete ? "text-gray-400" : "text-red-600"}`}
+                        >
+                          Wrong:
+                        </label>
+                        <input
+                          type="text"
+                          value={wrongAnswer2}
+                          onChange={handleWrongAnswer2Change}
+                          placeholder="Wrong answer 2..."
+                          disabled={!isVideoUploadComplete}
+                          className={`flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#764ba2] focus:border-transparent transition-colors text-xs ${!isVideoUploadComplete ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                          maxLength={80}
+                        />
+                      </div>
+
+                      {/* Submit Quiz Button */}
+                      <div className="pt-3 mt-3 border-t border-gray-200">
+                        <button
+                          onClick={submitQuiz}
+                          disabled={
+                            !isVideoUploadComplete ||
+                            !quizQuestion.trim() ||
+                            !correctAnswer.trim() ||
+                            !wrongAnswer1.trim() ||
+                            !wrongAnswer2.trim() ||
+                            isSubmittingQuiz
+                          }
+                          className="w-full bg-gradient-to-r from-[#764ba2] to-[#667eea] text-white px-3 py-2 rounded-lg hover:shadow-lg hover:scale-105 transform transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-xs font-medium"
+                        >
+                          {isSubmittingQuiz ? "Submitting..." : "Submit Quiz"}
+                        </button>
+                        <p
+                          className={`text-xs mt-2 text-center ${!isVideoUploadComplete ? "text-gray-400" : "text-gray-500"}`}
+                        >
+                          {!isVideoUploadComplete
+                            ? "Complete video upload to enable quiz submission"
+                            : "Quiz will be saved separately from video upload"}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>

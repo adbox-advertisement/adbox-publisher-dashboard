@@ -1,20 +1,46 @@
-import CryptoJS from "crypto-js";
-
-const key = import.meta.env.VITE_SECRET_KEY;
 export const Storage = {
   saveToken: (token: string) => {
-    const encryptedData = CryptoJS.AES.encrypt(token, key).toString();
-    localStorage.setItem("token", encryptedData);
+    try {
+      if (!token) {
+        console.error("Token is empty or null");
+        return false;
+      }
+
+      localStorage.setItem("authToken", token);
+      return true;
+    } catch (error) {
+      console.error("Error saving token:", error);
+      return false;
+    }
   },
 
   getToken: () => {
-    const encryptedData = localStorage.getItem("token");
-    if (encryptedData !== null) {
-      const decryptedData = CryptoJS.AES.decrypt(encryptedData, key).toString(
-        CryptoJS.enc.Utf8
-      );
-      return decryptedData;
+    try {
+      const token = localStorage.getItem("authToken");
+      return token;
+    } catch (error) {
+      console.error("Error getting token:", error);
+      return null;
     }
-    return null;
+  },
+
+  clearToken: () => {
+    try {
+      localStorage.removeItem("authToken");
+      return true;
+    } catch (error) {
+      console.error("Error clearing authToken:", error);
+      return false;
+    }
+  },
+
+  // Debug method to check storage state
+  debugToken: () => {
+    console.log("=== Token Debug Info ===");
+    const token = localStorage.getItem("authToken");
+    console.log("Token exists:", !!token);
+    console.log("Token length:", token?.length || 0);
+    console.log("Token value:", token);
+    console.log("========================");
   },
 };

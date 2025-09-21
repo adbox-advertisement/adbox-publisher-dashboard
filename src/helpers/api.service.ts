@@ -16,7 +16,7 @@ apiClient.interceptors.request.use(
     const token = Storage.getToken();
     if (token) {
       config.headers["Authorization"] = `Bearer ${token}`;
-      console.log("Attaching token:", config.headers["Authorization"]);
+      // console.log("Attaching token:", config.headers["Authorization"]);
     } else {
       console.warn("No token found in storage");
     }

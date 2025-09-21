@@ -134,29 +134,56 @@ export const DashboardAuthProvider: React.FC<DashboardAuthProviderProps> = ({
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlToken = urlParams.get("token");
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlToken = urlParams.get("token");
+        const encodedPublisher = urlParams.get("publisher");
 
-      let token: string | null = null;
+        let publisherData = null;
+        let token: string | null = null;
 
-      if (urlToken) {
-        localStorage.setItem("authToken", urlToken);
+        // Handle publisher data decoding
+        if (encodedPublisher) {
+          try {
+            publisherData = JSON.parse(
+              atob(decodeURIComponent(encodedPublisher))
+            );
 
-        // Clean up URL
-        window.history.replaceState(
-          {},
-          document.title,
-          window.location.pathname
-        );
+            if (publisherData) {
+              localStorage.setItem(
+                "publisherId",
+                JSON.stringify(publisherData)
+              );
+            }
+          } catch (err) {
+            console.error("Failed to decode publisher data:", err);
+          }
+        }
 
-        token = urlToken;
-        console.log("Token from URL: ", token);
-      } else {
-        token = localStorage.getItem("authToken");
-        console.log("Token from localStorage: ", token);
+        // Handle token processing
+        if (urlToken) {
+          localStorage.setItem("authToken", urlToken);
+          token = urlToken;
+
+          // Clean up URL parameters
+          const newUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}`;
+          window.history.replaceState({}, document.title, newUrl);
+        } else {
+          token = localStorage.getItem("authToken");
+          if (token) {
+            console.log("Token retrieved from localStorage");
+          } else {
+            console.log("No authentication token found");
+          }
+        }
+
+        // You might want to validate the token here
+        // await validateToken(token);
+      } catch (error) {
+        console.error("Error during authentication initialization:", error);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     initializeAuth();

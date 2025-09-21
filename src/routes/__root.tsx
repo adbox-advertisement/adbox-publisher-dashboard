@@ -1,5 +1,5 @@
 import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FiUpload,
   FiHome,
@@ -9,20 +9,66 @@ import {
   FiMenu,
   FiX,
 } from "react-icons/fi";
-import { HiOutlineWallet } from "react-icons/hi2";
-import { HiOutlineClipboardDocumentList } from "react-icons/hi2";
-import { Toaster } from "sonner";
+import {
+  HiOutlineWallet,
+  HiOutlineClipboardDocumentList,
+} from "react-icons/hi2";
+import { Toaster, toast } from "sonner"; // 👈 use toast from sonner
+import { socketService } from "../sockets/connections";
+import { ConnectionEnum } from "../sockets/types/socket";
+import { Storage } from "../helpers/local.storage";
+
 export const Route = createRootRoute({
   component: () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [connection, setConnection] = useState<ConnectionEnum>(
+      ConnectionEnum.connected
+    );
+    const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+    const { id: publisherId } = Storage.getPublisherId("publisherId") || {};
 
-    const toggleMobileMenu = () => {
-      setIsMobileMenuOpen(!isMobileMenuOpen);
-    };
+    useEffect(() => {
+      const subscription = socketService.listener$.subscribe((response) => {
+        if (response["listener"] === "connection") {
+          setConnection(response.data.stage as ConnectionEnum);
+        }
+      });
+      return () => subscription.unsubscribe();
+    }, [publisherId]);
 
+    useEffect(() => {
+      switch (connection) {
+        case ConnectionEnum.connected:
+          toast.success("Connected ");
+          break;
+
+        case ConnectionEnum.disconnected:
+          toast.error("❌ Disconnected");
+          break;
+
+        case ConnectionEnum.reconnecting:
+          toast.warning("🔄 Reconnecting...");
+          break;
+
+        case ConnectionEnum.connecting:
+          toast.info("⏳ Connecting...");
+          break;
+      }
+    }, [connection]);
+
+    useEffect(() => {
+      const subscription = socketService.listener$.subscribe((response) => {
+        if (response["listener"] === "connection") {
+          setConnection(response.data.stage as ConnectionEnum);
+        }
+      });
+
+      return () => subscription.unsubscribe();
+    }, []);
     return (
       <>
         <Toaster position="bottom-right" richColors />
+
         <div className="flex min-h-[100vh] max-w-[2000px] mx-auto">
           {/* Mobile Menu Overlay */}
           {isMobileMenuOpen && (
@@ -35,18 +81,17 @@ export const Route = createRootRoute({
           {/* Sidebar */}
           <div
             className={`
-            fixed md:relative top-0 left-0 h-full z-30
-            flex flex-col min-w-[250px] w-[250px] 
-            bg-white border-gray-200 border-r-[1px]
-            transform transition-transform duration-300 ease-in-out
-            ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
-            md:translate-x-0
-          `}
+              fixed md:relative top-0 left-0 h-full z-30
+              flex flex-col min-w-[250px] w-[250px] 
+              bg-white border-gray-200 border-r-[1px]
+              transform transition-transform duration-300 ease-in-out
+              ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
+              md:translate-x-0
+            `}
           >
             {/* Header */}
             <section className="border-b-[1px] border-gray-200 h-[70px] text-center flex justify-center items-center text-[20px] md:text-[28px] relative">
               <span className="truncate px-4 font-bold">Adbox studio</span>
-              {/* Mobile close button */}
               <button
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 md:hidden p-2"
                 onClick={toggleMobileMenu}
@@ -58,7 +103,6 @@ export const Route = createRootRoute({
 
             {/* Navigation */}
             <section className="mt-3 flex flex-col px-[10px] gap-6 md:gap-10 text-[16px] md:text-[18px] overflow-y-auto">
-              {/* Upload Button */}
               <div className="mt-0.5 rounded-lg">
                 <Link
                   to="/upload"
@@ -150,13 +194,23 @@ export const Route = createRootRoute({
                 >
                   <FiMenu className="w-6 h-6" />
                 </button>
-                {/* Spacer for mobile title */}
                 <div className="md:hidden flex-1 text-center text-lg font-medium">
                   Adbox studio
                 </div>
 
-                {/* Logo - far right corner */}
-                <div className="ml-auto flex items-center gap-2">
+                {/* Right side */}
+                <div className="ml-auto flex items-center gap-4">
+                  {/* 🔹 Connection Indicator */}
+                  <div
+                    className={`w-3 h-3 rounded-full ${
+                      connection === ConnectionEnum.connected
+                        ? "bg-green-500"
+                        : connection === ConnectionEnum.reconnecting
+                          ? "bg-yellow-500"
+                          : "bg-red-500"
+                    }`}
+                    title={`Status: ${connection}`}
+                  />
                   <div className="rounded-full bg-gradient-to-br from-[#764ba2] to-[#667eea] p-3 flex items-center justify-center">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -186,8 +240,6 @@ export const Route = createRootRoute({
             </div>
           </div>
         </div>
-
-        {/* <TanStackRouterDevtools /> */}
       </>
     );
   },

@@ -1,137 +1,138 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, type JSX } from "react";
+import { useEffect, useState, type JSX, useCallback } from "react";
 import {
   Eye,
   Heart,
   MessageCircle,
-  Share2,
   MoreVertical,
   Play,
   Search,
   Edit3,
   Trash2,
-  BarChart3,
   Download,
-  Copy,
+  Lock,
+  Globe,
+  Filter,
+  X,
+  Loader2,
 } from "lucide-react";
-
-// Type definitions
-interface Post {
-  id: number;
-  title: string;
-  thumbnail: string;
-  type: "video" | "image";
-  duration: string | null;
-  status: "published" | "scheduled" | "draft";
-  publishDate: string | null;
-  views: number;
-  likes: number;
-  comments: number;
-  shares: number;
-  engagement: number;
-  isPrivate: boolean;
-}
-
-type FilterStatus = "all" | "published" | "scheduled" | "draft";
-// type SortBy = "publishDate" | "views" | "likes" | "comments" | "engagement";
-// type SortBy = "publishDate" | "views" | "likes" | "comments" | "engagement";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useSocket } from "../../context/SocketContext";
+import type { Post, SortBy, SortOrder } from "../../components/post/interface";
+import { SkeletonCard } from "../../components/post/skeleton";
+// import { mockPosts } from "../../components/post/post";
+import ApiService from "@/helpers/api.service";
+import { toast } from "sonner";
+import { Storage } from "@/helpers/local.storage";
+import { VideoPlayerDialog } from "@/components/post/player";
 
 export const Route = createFileRoute("/posts/")({
   component: Posts,
 });
 
 function Posts(): JSX.Element {
-  const [posts] = useState<Post[]>([
-    {
-      id: 1,
-      title: "Summer vibes and good times",
-      thumbnail:
-        "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&h=400&fit=crop&crop=center",
-      type: "video",
-      duration: "0:45",
-      status: "published",
-      publishDate: "2024-09-01",
-      views: 125400,
-      likes: 8930,
-      comments: 542,
-      shares: 186,
-      engagement: 7.8,
-      isPrivate: false,
-    },
-    {
-      id: 2,
-      title: "Quick cooking hack you need to try",
-      thumbnail:
-        "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=400&fit=crop&crop=center",
-      type: "video",
-      duration: "0:32",
-      status: "published",
-      publishDate: "2024-08-30",
-      views: 89200,
-      likes: 6750,
-      comments: 328,
-      shares: 445,
-      engagement: 8.4,
-      isPrivate: false,
-    },
-    {
-      id: 3,
-      title: "Behind the scenes of our photoshoot",
-      thumbnail:
-        "https://images.unsplash.com/photo-1493612276216-ee3925520721?w=400&h=400&fit=crop&crop=center",
-      type: "image",
-      duration: null,
-      status: "scheduled",
-      publishDate: "2024-09-05",
-      views: 0,
-      likes: 0,
-      comments: 0,
-      shares: 0,
-      engagement: 0,
-      isPrivate: false,
-    },
-    {
-      id: 4,
-      title: "Monday motivation quote",
-      thumbnail:
-        "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center",
-      type: "image",
-      duration: null,
-      status: "draft",
-      publishDate: null,
-      views: 0,
-      likes: 0,
-      comments: 0,
-      shares: 0,
-      engagement: 0,
-      isPrivate: true,
-    },
-    {
-      id: 5,
-      title: "Live stream highlights",
-      thumbnail:
-        "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=400&h=400&fit=crop&crop=center",
-      type: "video",
-      duration: "2:15",
-      status: "published",
-      publishDate: "2024-08-28",
-      views: 45600,
-      likes: 3240,
-      comments: 189,
-      shares: 87,
-      engagement: 7.7,
-      isPrivate: false,
-    },
-  ]);
-
-  // const [selectedPosts, setSelectedPosts] = useState<number[]>([]);
-  const [selectedPosts] = useState<number[]>([]);
-
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  // const [sortBy, setSortBy] = useState<SortBy>("publishDate");
-  // const [showFilters, setShowFilters] = useState<boolean>(false);
-  const [expandedPost, setExpandedPost] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState<SortBy>("date");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [showFiltersDialog, setShowFiltersDialog] = useState<boolean>(false);
+  const [activePostMenu, setActivePostMenu] = useState<number | null>(null);
+  const [showUploadingSkeleton, setShowUploadingSkeleton] =
+    useState<boolean>(false);
+
+  // Applied filters
+  const [appliedMinViews, setAppliedMinViews] = useState<string>("");
+  const [appliedMinLikes, setAppliedMinLikes] = useState<string>("");
+  const [appliedMinComments, setAppliedMinComments] = useState<string>("");
+  const [appliedPrivacyFilter, setAppliedPrivacyFilter] = useState<
+    "all" | "public" | "private"
+  >("all");
+
+  // Temp filters
+  const [tempMinViews, setTempMinViews] = useState<string>("");
+  const [tempMinLikes, setTempMinLikes] = useState<string>("");
+  const [tempMinComments, setTempMinComments] = useState<string>("");
+  const [tempPrivacyFilter, setTempPrivacyFilter] = useState<
+    "all" | "public" | "private"
+  >("all");
+
+  // Fetch posts function
+  const fetchPublisherPosts = useCallback(async (isInitialLoad = false) => {
+    const { id } = Storage.getPublisherId("publisherId") || {};
+
+    try {
+      if (isInitialLoad) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+
+      const response = await ApiService.get_api(`/resources/publisher/${id}`);
+      setPosts(response.data);
+      toast.info("Your Posts!!!");
+      console.log("response : ", response.data);
+    } catch (error) {
+      toast.error(`❌ Upload failed`);
+      console.error("Upload failed:", error);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchPublisherPosts(true);
+  }, [fetchPublisherPosts]);
+
+  // Socket events handling
+  const { UploadingEventData, publishedVideo } = useSocket();
+
+  useEffect(() => {
+    if (UploadingEventData) {
+      console.log(
+        "🚀 Got Uploading Event Data in component:",
+        UploadingEventData
+      );
+      setShowUploadingSkeleton(true);
+    }
+  }, [UploadingEventData]);
+
+  useEffect(() => {
+    if (publishedVideo) {
+      console.log("🚀 The video is done storing in db:", publishedVideo);
+      // Hide uploading skeleton and refresh the data
+      setShowUploadingSkeleton(false);
+      fetchPublisherPosts(false);
+    }
+  }, [publishedVideo, fetchPublisherPosts]);
+
+  // Close menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        !document
+          .querySelector(`.post-menu-${activePostMenu}`)
+          ?.contains(target)
+      ) {
+        setActivePostMenu(null);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [activePostMenu]);
 
   const formatNumber = (num: number): string => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
@@ -139,261 +140,604 @@ function Posts(): JSX.Element {
     return num.toString();
   };
 
-  const getStatusColor = (status: Post["status"]): string => {
-    switch (status) {
-      case "published":
-        return "bg-green-100 text-green-700";
-      case "scheduled":
-        return "bg-blue-100 text-blue-700";
-      case "draft":
-        return "bg-gray-200 text-gray-700";
-      default:
-        return "bg-gray-200 text-gray-700";
+  const handleDelete = (postId: number) => {
+    if (confirm("Are you sure you want to delete this post?")) {
+      setPosts(posts.filter((post) => post.id !== postId));
+    }
+    setActivePostMenu(null);
+  };
+
+  const handleEdit = (postId: number) => {
+    console.log("Edit post:", postId);
+    setActivePostMenu(null);
+  };
+
+  const handleDownload = (postId: number) => {
+    console.log("Download post:", postId);
+    setActivePostMenu(null);
+  };
+
+  const togglePrivacy = (postId: number) => {
+    setPosts(
+      posts.map((post) => {
+        if (post.id === postId) {
+          const updatedPost = { ...post, isPrivate: !post.isPrivate };
+          const action = updatedPost.isPrivate ? "private" : "public";
+          console.log(`Post "${post.resourceTitle}" is now ${action}`);
+          return updatedPost;
+        }
+        return post;
+      })
+    );
+    setActivePostMenu(null);
+  };
+
+  const openFiltersDialog = () => {
+    setTempMinViews(appliedMinViews);
+    setTempMinLikes(appliedMinLikes);
+    setTempMinComments(appliedMinComments);
+    setTempPrivacyFilter(appliedPrivacyFilter);
+    setShowFiltersDialog(true);
+  };
+
+  const applyFilters = () => {
+    setAppliedMinViews(tempMinViews);
+    setAppliedMinLikes(tempMinLikes);
+    setAppliedMinComments(tempMinComments);
+    setAppliedPrivacyFilter(tempPrivacyFilter);
+    setShowFiltersDialog(false);
+  };
+
+  const clearAllFilters = () => {
+    setTempMinViews("");
+    setTempMinLikes("");
+    setTempMinComments("");
+    setTempPrivacyFilter("all");
+    setAppliedMinViews("");
+    setAppliedMinLikes("");
+    setAppliedMinComments("");
+    setAppliedPrivacyFilter("all");
+    setSearchTerm("");
+    setSortBy("date");
+    setSortOrder("desc");
+  };
+
+  const clearIndividualFilter = (filterType: string) => {
+    switch (filterType) {
+      case "views":
+        setAppliedMinViews("");
+        break;
+      case "likes":
+        setAppliedMinLikes("");
+        break;
+      case "comments":
+        setAppliedMinComments("");
+        break;
+      case "privacy":
+        setAppliedPrivacyFilter("all");
+        break;
     }
   };
 
-  const filteredPosts: Post[] = posts.filter((post) => {
-    const matchesStatus: boolean =
-      filterStatus === "all" || post.status === filterStatus;
-    const matchesSearch: boolean = post.title
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
+  const hasActiveFilters = () => {
+    return (
+      appliedMinViews ||
+      appliedMinLikes ||
+      appliedMinComments ||
+      appliedPrivacyFilter !== "all"
+    );
+  };
 
-  // const togglePostSelection = (postId: number): void => {
-  //   setSelectedPosts((prev) =>
-  //     prev.includes(postId)
-  //       ? prev.filter((id) => id !== postId)
-  //       : [...prev, postId]
-  //   );
-  // };
+  const filteredPosts: Post[] = posts
+    .filter((post) => {
+      const matchesSearch = post.resourceTitle
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const matchesViews =
+        !appliedMinViews ||
+        post._count.ViewerViewsOnResource >= parseInt(appliedMinViews);
+      const matchesLikes =
+        !appliedMinLikes ||
+        post._count.ViewerLikesOnResource >= parseInt(appliedMinLikes);
+      const matchesComments =
+        !appliedMinComments ||
+        post._count.ViewerCommentsOnResource >= parseInt(appliedMinComments);
+      const matchesPrivacy =
+        appliedPrivacyFilter === "all" ||
+        (appliedPrivacyFilter === "public" && !post.isPrivate) ||
+        (appliedPrivacyFilter === "private" && post.isPrivate);
+
+      return (
+        matchesSearch &&
+        matchesViews &&
+        matchesLikes &&
+        matchesComments &&
+        matchesPrivacy
+      );
+    })
+    .sort((a, b) => {
+      let aVal: number, bVal: number;
+
+      switch (sortBy) {
+        case "views":
+          aVal = a._count.ViewerViewsOnResource;
+          bVal = b._count.ViewerViewsOnResource;
+          break;
+        case "likes":
+          aVal = a._count.ViewerLikesOnResource;
+          bVal = b._count.ViewerLikesOnResource;
+          break;
+        case "comments":
+          aVal = a._count.ViewerCommentsOnResource;
+          bVal = b._count.ViewerCommentsOnResource;
+          break;
+        case "date":
+          aVal = new Date(a.createdAt || "1970-01-01").getTime();
+          bVal = new Date(b.createdAt || "1970-01-01").getTime();
+          break;
+        default:
+          return 0;
+      }
+
+      return sortOrder === "desc" ? bVal - aVal : aVal - bVal;
+    });
+
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+
+  const handleThumbnailClick = (): void => {
+    setIsDialogOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
-      <div className="px-4 py-6">
-        {/* Mobile Search and Filters */}
-        <div className="space-y-3 mb-6">
-          <div className="relative">
+      <div className="px-3 py-4 max-w-md mx-auto sm:max-w-2xl lg:max-w-4xl xl:max-w-6xl">
+        {/* Mobile-First Header */}
+        <div className="mb-6">
+          <h1 className="text-lg font-bold text-gray-900 mb-4 sm:text-xl">
+            My Posts
+          </h1>
+
+          {/* Search Bar */}
+          <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder="Search posts..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent text-sm"
+              disabled={isLoading}
             />
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {(["all", "published", "scheduled", "draft"] as const).map(
-              (status) => (
+          {/* Controls Row */}
+          <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+            <Dialog
+              open={showFiltersDialog}
+              onOpenChange={setShowFiltersDialog}
+            >
+              <DialogTrigger asChild>
                 <button
-                  key={status}
-                  onClick={() => setFilterStatus(status)}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
-                    filterStatus === status
-                      ? "bg-[#764ba2] text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  onClick={openFiltersDialog}
+                  disabled={isLoading}
+                  className={`flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-all font-medium text-sm ${
+                    hasActiveFilters()
+                      ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                      : ""
                   }`}
                 >
-                  {status === "all"
-                    ? "All Posts"
-                    : status.charAt(0).toUpperCase() + status.slice(1)}
+                  <Filter className="w-4 h-4" />
+                  <span>Filters</span>
+                  {hasActiveFilters() && (
+                    <span className="bg-indigo-500 text-white text-xs rounded-full w-2 h-2"></span>
+                  )}
                 </button>
-              )
-            )}
+              </DialogTrigger>
+
+              <DialogContent className="w-[95vw] max-w-md mx-auto bg-white backdrop-blur-sm rounded-2xl">
+                <DialogHeader className="text-left">
+                  <DialogTitle className="text-base font-semibold text-gray-900">
+                    Advanced Filters
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-gray-600 mt-1">
+                    Set your filtering preferences and tap apply to update
+                    results.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-6 py-4">
+                  <div className="space-y-5">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-2">
+                        Minimum Views
+                      </label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100000}
+                        step={1000}
+                        value={tempMinViews || 0}
+                        onChange={(e) => setTempMinViews(e.target.value)}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                      <p className="text-xs text-gray-500 mt-2">
+                        {tempMinViews
+                          ? `≥ ${formatNumber(parseInt(tempMinViews))} views`
+                          : "No minimum"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-2">
+                        Minimum Likes
+                      </label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={5000}
+                        step={50}
+                        value={tempMinLikes || 0}
+                        onChange={(e) => setTempMinLikes(e.target.value)}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                      <p className="text-xs text-gray-500 mt-2">
+                        {tempMinLikes
+                          ? `≥ ${formatNumber(parseInt(tempMinLikes))} likes`
+                          : "No minimum"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-2">
+                        Minimum Comments
+                      </label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1000}
+                        step={10}
+                        value={tempMinComments || 0}
+                        onChange={(e) => setTempMinComments(e.target.value)}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                      <p className="text-xs text-gray-500 mt-2">
+                        {tempMinComments
+                          ? `≥ ${formatNumber(parseInt(tempMinComments))} comments`
+                          : "No minimum"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">
+                      Privacy
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {["all", "public", "private"].map((option) => (
+                        <button
+                          key={option}
+                          onClick={() =>
+                            setTempPrivacyFilter(
+                              option as "all" | "public" | "private"
+                            )
+                          }
+                          className={`px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
+                            tempPrivacyFilter === option
+                              ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                              : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 active:bg-gray-100"
+                          }`}
+                        >
+                          {option.charAt(0).toUpperCase() + option.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <DialogFooter className="flex flex-col gap-3 pt-4">
+                  <button
+                    onClick={clearAllFilters}
+                    className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-xl transition-all font-medium text-sm"
+                  >
+                    Clear All Filters
+                  </button>
+                  <button
+                    onClick={applyFilters}
+                    className="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-xl transition-all font-medium shadow-sm text-sm"
+                  >
+                    Apply Filters
+                  </button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
-        </div>
 
-        {/* Mobile Posts List */}
-        <div className="space-y-4">
-          {filteredPosts.map((post) => (
-            <div
-              key={post.id}
-              className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm"
-            >
-              {/* Post Header */}
-              <div className="p-4">
-                <div className="flex items-start gap-3">
-                  {/* Thumbnail */}
-                  <div className="relative flex-shrink-0">
-                    <img
-                      src={post.thumbnail}
-                      alt={post.title}
-                      className="w-16 h-16 rounded-lg object-cover border border-gray-200"
-                    />
-                    {post.type === "video" && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
-                        <Play className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                    {post.duration && (
-                      <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1 rounded">
-                        {post.duration}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Post Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-gray-900 font-medium text-sm leading-tight pr-2 line-clamp-2">
-                        {post.title}
-                      </h3>
-                      <button
-                        onClick={() =>
-                          setExpandedPost(
-                            expandedPost === post.id ? null : post.id
-                          )
-                        }
-                        className="text-gray-400 hover:text-gray-600 transition-colors p-1 flex-shrink-0"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-2 mb-2">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(post.status)}`}
-                      >
-                        {post.status}
-                      </span>
-                      {post.publishDate && (
-                        <span className="text-gray-500 text-xs">
-                          {new Date(post.publishDate).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Mobile Stats */}
-                    <div className="flex items-center gap-4 text-xs text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <Eye className="w-3 h-3" />
-                        <span>{formatNumber(post.views)}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Heart className="w-3 h-3" />
-                        <span>{formatNumber(post.likes)}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MessageCircle className="w-3 h-3" />
-                        <span>{formatNumber(post.comments)}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Share2 className="w-3 h-3" />
-                        <span>{formatNumber(post.shares)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Expanded Actions */}
-              {expandedPost === post.id && (
-                <div className="border-t border-gray-200 p-4 bg-gray-50/70">
-                  <div className="grid grid-cols-2 gap-2">
-                    <button className="flex items-center justify-center gap-2 py-2 px-3 bg-gray-100 rounded-lg text-gray-700 text-sm hover:bg-gray-200 transition-all">
-                      <BarChart3 className="w-4 h-4" />
-                      Analytics
-                    </button>
-                    <button className="flex items-center justify-center gap-2 py-2 px-3 bg-gray-100 rounded-lg text-gray-700 text-sm hover:bg-gray-200 transition-all">
-                      <Edit3 className="w-4 h-4" />
-                      Edit
-                    </button>
-                    <button className="flex items-center justify-center gap-2 py-2 px-3 bg-gray-100 rounded-lg text-gray-700 text-sm hover:bg-gray-200 transition-all">
-                      <Copy className="w-4 h-4" />
-                      Duplicate
-                    </button>
-                    <button className="flex items-center justify-center gap-2 py-2 px-3 bg-gray-100 rounded-lg text-gray-700 text-sm hover:bg-gray-200 transition-all">
-                      <Download className="w-4 h-4" />
-                      Download
-                    </button>
-                  </div>
-
-                  {/* Detailed Stats */}
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <h4 className="text-gray-800 text-sm font-medium mb-3">
-                      Performance Details
-                    </h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 text-sm">
-                          Engagement Rate
-                        </span>
-                        <span className="text-gray-900 font-medium">
-                          {post.engagement}%
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 text-sm">Views</span>
-                        <span className="text-gray-900 font-medium">
-                          {post.views.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 text-sm">Likes</span>
-                        <span className="text-gray-900 font-medium">
-                          {post.likes.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 text-sm">Comments</span>
-                        <span className="text-gray-900 font-medium">
-                          {post.comments.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 text-sm">Shares</span>
-                        <span className="text-gray-900 font-medium">
-                          {post.shares.toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Danger Zone */}
-                  <div className="mt-4 pt-4 border-t border-red-200">
-                    <button className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-red-100 rounded-lg text-red-700 text-sm hover:bg-red-200 transition-all">
-                      <Trash2 className="w-4 h-4" />
-                      Delete Post
-                    </button>
-                  </div>
-                </div>
+          {hasActiveFilters() && (
+            <div className="flex flex-wrap gap-2 mt-4">
+              {appliedMinViews && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full">
+                  ≥ {formatNumber(parseInt(appliedMinViews))} Views
+                  <button
+                    onClick={() => clearIndividualFilter("views")}
+                    className="hover:bg-indigo-200 rounded-full p-0.5"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
               )}
-            </div>
-          ))}
-
-          {filteredPosts.length === 0 && (
-            <div className="text-center py-12">
-              <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600 mb-2">No posts found</p>
-              <p className="text-gray-500 text-sm">
-                Try adjusting your filters
-              </p>
+              {appliedMinLikes && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full">
+                  ≥ {formatNumber(parseInt(appliedMinLikes))} Likes
+                  <button
+                    onClick={() => clearIndividualFilter("likes")}
+                    className="hover:bg-indigo-200 rounded-full p-0.5"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {appliedMinComments && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full">
+                  ≥ {formatNumber(parseInt(appliedMinComments))} Comments
+                  <button
+                    onClick={() => clearIndividualFilter("comments")}
+                    className="hover:bg-indigo-200 rounded-full p-0.5"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {appliedPrivacyFilter !== "all" && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full capitalize">
+                  {appliedPrivacyFilter} Only
+                  <button
+                    onClick={() => clearIndividualFilter("privacy")}
+                    className="hover:bg-indigo-200 rounded-full p-0.5"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
             </div>
           )}
         </div>
 
-        {/* Mobile Bulk Actions */}
-        {selectedPosts.length > 0 && (
-          <div className="fixed bottom-4 left-4 right-4 bg-white rounded-xl p-4 border border-gray-300 shadow-md">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-800 text-sm font-medium">
-                {selectedPosts.length} selected
-              </span>
-              <div className="flex gap-2">
-                <button className="px-3 py-2 bg-gray-100 rounded-lg text-gray-700 text-sm hover:bg-gray-200 transition-all">
-                  Export
-                </button>
-                <button className="px-3 py-2 bg-red-100 rounded-lg text-red-700 text-sm hover:bg-red-200 transition-all">
-                  Delete
-                </button>
-              </div>
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center space-y-4">
+              <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+              <p className="text-sm text-gray-600 font-medium">
+                Loading your posts...
+              </p>
             </div>
           </div>
         )}
+
+        {/* Posts List */}
+        {!isLoading && (
+          <div className="space-y-3">
+            {/* Show refreshing indicator */}
+            {isRefreshing && (
+              <div className="flex items-center justify-center py-4">
+                <div className="flex items-center space-x-2 bg-purple-50 px-4 py-2 rounded-full">
+                  <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                  <span className="text-sm text-purple-700 font-medium">
+                    Updating posts...
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Show uploading skeleton when video is being uploaded */}
+            {showUploadingSkeleton && (
+              <div className="space-y-3">
+                {[1].map((i) => (
+                  <SkeletonCard key={`uploading-${i}`} index={i - 1} />
+                ))}
+              </div>
+            )}
+
+            {filteredPosts.map((post) => (
+              <div
+                key={post.id}
+                className="bg-white rounded-xl border border-gray-200  transition-colors  hover:shadow-sm"
+              >
+                <div className="p-3 ">
+                  <div className="flex items-start gap-2">
+                    {/* Thumbnail */}
+                    <div
+                      className={`relative flex-shrink-0 cursor-pointer group ${""}`}
+                      onClick={handleThumbnailClick}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleThumbnailClick();
+                        }
+                      }}
+                      aria-label={`Play video: ${post.resourceTitle}`}
+                    >
+                      <img
+                        src={post.videoResource.thumbnail.imageUrl}
+                        alt={post.resourceTitle}
+                        className="w-16 h-16 rounded-lg object-cover border border-gray-200 transition-transform duration-200 group-hover:scale-105 group-hover:shadow-md"
+                      />
+
+                      {/* Play button overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Play className="w-5 h-5 text-white drop-shadow-lg" />
+                      </div>
+
+                      {/* Video duration badge */}
+                      {post.videoResource.VideoLength && (
+                        <div className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded">
+                          {post.videoResource.VideoLength}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between mb-1">
+                        <h3 className="text-gray-900 font-semibold text-sm leading-tight pr-2 line-clamp-2">
+                          {post.resourceTitle}
+                        </h3>
+
+                        {/* More Menu */}
+                        <div className="relative">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActivePostMenu(
+                                activePostMenu === post.id ? null : post.id
+                              );
+                            }}
+                            className={`p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors post-menu-${post.id}`}
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+
+                          {/* Dropdown Menu */}
+                          {activePostMenu === post.id && (
+                            <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+                              <button
+                                onClick={() => togglePrivacy(post.id)}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors text-sm"
+                              >
+                                {post.isPrivate ? (
+                                  <>
+                                    <Globe className="w-4 h-4 text-green-600" />
+                                    <span>Make Public</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Lock className="w-4 h-4 text-red-600" />
+                                    <span>Make Private</span>
+                                  </>
+                                )}
+                              </button>
+
+                              <button
+                                onClick={() => handleEdit(post.id)}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors text-sm"
+                              >
+                                <Edit3 className="w-4 h-4 text-blue-600" />
+                                <span>Edit</span>
+                              </button>
+
+                              <button
+                                onClick={() => handleDownload(post.id)}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors text-sm"
+                              >
+                                <Download className="w-4 h-4 text-green-600" />
+                                <span>Download</span>
+                              </button>
+
+                              <hr className="my-1 border-gray-100" />
+
+                              <button
+                                onClick={() => handleDelete(post.id)}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-left text-red-600 hover:bg-red-50 transition-colors text-sm"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Status and Date */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 ${
+                            post.isPrivate
+                              ? "bg-red-100 text-red-700"
+                              : "bg-green-100 text-green-700"
+                          }`}
+                        >
+                          {post.isPrivate ? (
+                            <>
+                              <Lock className="w-3 h-3" />
+                              Private
+                            </>
+                          ) : (
+                            <>
+                              <Globe className="w-3 h-3" />
+                              Public
+                            </>
+                          )}
+                        </span>
+
+                        {post.createdAt && (
+                          <span className="text-gray-500 text-xs">
+                            {new Date(post.createdAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Stats */}
+                      <div className="grid grid-cols-2 gap-3 text-xs text-gray-600 sm:flex sm:gap-4">
+                        <div className="flex items-center gap-1">
+                          <Eye className="w-3 h-3 text-gray-400" />
+                          <span className="font-medium">
+                            {formatNumber(post._count.ViewerViewsOnResource)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Heart className="w-3 h-3 text-gray-400" />
+                          <span className="font-medium">
+                            {formatNumber(post._count.ViewerLikesOnResource)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MessageCircle className="w-3 h-3 text-gray-400" />
+                          <span className="font-medium">
+                            {formatNumber(post._count.ViewerCommentsOnResource)}
+                          </span>
+                        </div>
+                        {/* <div className="flex items-center gap-1">
+                          <Share2 className="w-3 h-3 text-gray-400" />
+                          <span className="font-medium">
+                            {formatNumber(post.shares)}
+                          </span>
+                        </div> */}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Empty State */}
+            {filteredPosts.length === 0 &&
+              !showUploadingSkeleton &&
+              !isRefreshing && (
+                <div className="text-center py-12">
+                  <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-base font-semibold text-gray-900 mb-2">
+                    No posts found
+                  </h3>
+                  <p className="text-gray-500 text-sm">
+                    Try adjusting your filters or search terms
+                  </p>
+                </div>
+              )}
+          </div>
+        )}
       </div>
+      {/* Video Player Dialog */}
+      <VideoPlayerDialog
+        src="https://adbox-bucket.s3.us-east-1.amazonaws.com/videos/0e4c37b8-5e2c-477d-996f-50a618ebd134/hls/master.m3u8"
+        isOpen={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        companyLogo="https://placehold.co/100x100.png"
+        companyName="MingoBlox"
+        videoTitle="Getting Started with Our Platform"
+        videoDescription="This video walks you through the basics of using our dashboard, managing content, and understanding the key features."
+      />
     </div>
   );
 }

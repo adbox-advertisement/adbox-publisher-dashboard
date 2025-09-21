@@ -6,12 +6,15 @@ import React, {
   useState,
   type ReactNode,
 } from "react";
-import { io, Socket } from "socket.io-client";
-import { Storage } from "../helpers/local.storage";
+import { socketService } from "../sockets/connections";
 
 interface SocketContextValue {
-  socket: Socket | null;
+  socket: ReturnType<typeof socketService.initSocket> | null;
   isConnected: boolean;
+  testEventData: any | null;
+  UploadingEventData: any | null;
+  publishedVideo: any | null;
+  UploadedTos3: any | null;
 }
 
 const SocketContext = createContext<SocketContextValue | null>(null);
@@ -21,48 +24,58 @@ interface SocketProviderProps {
 }
 
 export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [socket, setSocket] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const url = import.meta.env.VITE_SOCKET_URL;
+  const [testEventData, setTestEventData] = useState<any | null>(null);
+  const [UploadingEventData, setUploadingEventData] = useState<any | null>(
+    null
+  );
+  const [publishedVideo, setpublishedVideo] = useState<any | null>(null);
+  const [UploadedTos3, setUploadedTos3] = useState<any | null>(null);
 
   useEffect(() => {
-    const token = Storage.getToken();
-    if (!token) return;
-
-    const newSocket = io(url, {
-      // ✅ Send token as authorization header - this is what your server expects
-      extraHeaders: {
-        authorization: `Bearer ${token}`, // or just token if your server doesn't expect "Bearer "
-      },
-      // transports: ["polling"],
-      // transports: ["polling", "websocket"],
-    });
-
-    newSocket.on("connect", () => {
-      console.log("Socket connected:", newSocket.id);
-      setIsConnected(true);
-    });
-
-    newSocket.on("disconnect", () => {
-      console.log("Socket disconnected");
-      setIsConnected(false);
-    });
-
-    newSocket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error);
-      setIsConnected(false);
-    });
-
+    // 🔌 initialize socket from service
+    const newSocket = socketService.initSocket();
     setSocket(newSocket);
+
+    if (!newSocket) return;
+
+    // ✅ connection listeners
+    newSocket.on("connect", () => setIsConnected(true));
+    newSocket.on("disconnect", () => setIsConnected(false));
+
+    // 🎯 only care about test-event
+    newSocket.on("test-event", (data: any) => {
+      setTestEventData(data);
+    });
+
+    newSocket.on("UploadCompleted", (data: any) => {
+      setUploadingEventData(data);
+    });
+
+    newSocket.on("uploaded-to-s3", (data: any) => {
+      console.log("Tooooooo s3", data);
+      setUploadedTos3(data);
+    });
+
+    newSocket.on("published", (data: any) => {
+      console.log("published ", data);
+
+      setpublishedVideo(data);
+    });
 
     return () => {
       newSocket.disconnect();
     };
-  }, [url]);
+  }, []);
 
   const value: SocketContextValue = {
     socket,
+    publishedVideo,
     isConnected,
+    UploadingEventData,
+    testEventData,
+    UploadedTos3,
   };
 
   return (

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Heart,
   MessageCircle,
@@ -7,8 +7,9 @@ import {
   Eye,
   TrendingUp,
   Play,
-  MoreHorizontal,
+  // MoreHorizontal,
   Calendar,
+  Search,
 } from "lucide-react";
 import {
   LineChart,
@@ -19,7 +20,13 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-
+import { Storage } from "@/helpers/local.storage";
+import ApiService from "@/helpers/api.service";
+import type { Post } from "@/components/post/interface";
+import { toast } from "sonner";
+import { VideoPlayerDialog } from "@/components/post/player";
+import { Link } from "@tanstack/react-router";
+import { PostSkeleton } from "@/components/indexPage/Recentskeleton";
 export const Route = createFileRoute("/")({
   component: Index,
 });
@@ -35,55 +42,32 @@ const engagementData = [
   { date: "Jan 7", likes: 2100, comments: 640, views: 8500 },
 ];
 
-const recentPosts = [
-  {
-    id: 1,
-    thumbnail:
-      "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=300&h=400&fit=crop",
-    title: "Amazing sunset timelapse",
-    likes: 15420,
-    comments: 892,
-    views: 156000,
-    duration: "0:45",
-    posted: "2h ago",
-  },
-  {
-    id: 2,
-    thumbnail:
-      "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&h=400&fit=crop",
-    title: "Cooking tutorial: Perfect pasta",
-    likes: 8930,
-    comments: 445,
-    views: 89000,
-    duration: "2:15",
-    posted: "5h ago",
-  },
-  {
-    id: 3,
-    thumbnail:
-      "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=400&fit=crop",
-    title: "Dance challenge compilation",
-    likes: 23100,
-    comments: 1240,
-    views: 234000,
-    duration: "1:30",
-    posted: "1d ago",
-  },
-  {
-    id: 4,
-    thumbnail:
-      "https://images.unsplash.com/photo-1574158622682-e40e69881006?w=300&h=400&fit=crop",
-    title: "Cat being adorable",
-    likes: 45600,
-    comments: 2180,
-    views: 445000,
-    duration: "0:30",
-    posted: "2d ago",
-  },
-];
-
 function Index() {
   const [timeRange, setTimeRange] = useState("7d");
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+
+  // Simulate API call
+  useEffect(() => {
+    async function fetchPublisherPosts() {
+      const { id } = Storage.getPublisherId("publisherId") || {};
+
+      try {
+        const response = await ApiService.get_api(
+          `/resources/publisher/${id}?take=${4}`
+        );
+        setPosts(response.data);
+        toast.info("Your recent Posts!");
+        setIsLoading(false);
+      } catch (error) {
+        toast.error(`❌ Upload failed`);
+        console.error("Upload failed:", error);
+      }
+    }
+
+    fetchPublisherPosts();
+  }, []);
 
   const totalLikes = engagementData.reduce((sum, day) => sum + day.likes, 0);
   const totalComments = engagementData.reduce(
@@ -98,83 +82,22 @@ function Index() {
     return num.toString();
   };
 
-  // import { useDashboardAuth } from './DashboardAuthContext';
-
-  // const Dashboard = () => {
-  //   const { user, logout, apiRequest } = useDashboardAuth();
-  //   const [dashboardData, setDashboardData] = useState(null);
-  //   const [loading, setLoading] = useState(true);
-
-  //   useEffect(() => {
-  //     const loadDashboardData = async () => {
-  //       try {
-  //         const response = await apiRequest('/api/dashboard');
-  //         if (response && response.ok) {
-  //           const data = await response.json();
-  //           setDashboardData(data);
-  //         }
-  //       } catch (error) {
-  //         console.error('Failed to load dashboard data:', error);
-  //       } finally {
-  //         setLoading(false);
-  //       }
-  //     };
-
-  //     loadDashboardData();
-  //   }, [apiRequest]);
-
-  //   const handleLogout = () => {
-  //     logout();
-  //   };
-
-  //   if (loading) {
-  //     return (
-  //       <div className="min-h-screen flex items-center justify-center">
-  //         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
-  //       </div>
-  //     );
-  //   }
-
-  //   return (
-  //     <div className="min-h-screen bg-gray-100">
-  //       <header className="bg-white shadow">
-  //         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-  //           <div className="flex justify-between items-center h-16">
-  //             <h1 className="text-xl font-semibold">Dashboard</h1>
-  //             <div className="flex items-center space-x-4">
-  //               <span className="text-gray-700">Welcome, {user?.name || user?.email}</span>
-  //               <button
-  //                 onClick={handleLogout}
-  //                 className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-  //               >
-  //                 Logout
-  //               </button>
-  //             </div>
-  //           </div>
-  //         </div>
-  //       </header>
-
-  //       {/* Main Content */}
-  //       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-  //         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-  //           {/* Dashboard widgets */}
-  //           <div className="bg-white p-6 rounded-lg shadow">
-  //             <h2 className="text-lg font-medium mb-4">Stats</h2>
-  //             <p className="text-3xl font-bold text-blue-600">
-  //               {dashboardData?.stats || 0}
-  //             </p>
-  //           </div>
-
-  //         </div>
-  //       </main>
-  //     </div>
-  //   );
-  // };
-
-  // export default Dashboard;
+  const handleThumbnailClick = (): void => {
+    setIsDialogOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50">
+      {/* Add shimmer keyframes to the document head */}
+      <style>
+        {`
+          @keyframes shimmer {
+            0% { transform: translateX(-100%) skewX(-12deg); }
+            100% { transform: translateX(200%) skewX(-12deg); }
+          }
+        `}
+      </style>
+
       <div className="px-4 py-4 space-y-6">
         {/* Time Range Selector - Floating */}
         <div className="flex justify-end">
@@ -403,82 +326,126 @@ function Index() {
               <h3 className="text-lg md:text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
                 Recent Posts
               </h3>
-              <button
+              <Link
+                to="/posts"
                 className="px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-105"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
-                  color: "white",
-                }}
+                // style={{
+                //   background:
+                //     "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
+                //   color: "white",
+                // }}
               >
                 View all
-              </button>
+              </Link>
             </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 p-4 md:p-6">
-            {recentPosts.map((post) => (
-              <div key={post.id} className="group cursor-pointer">
-                <div className="relative rounded-xl overflow-hidden mb-3 transform group-hover:scale-105 transition-all duration-300 shadow-lg group-hover:shadow-xl">
-                  <img
-                    src={post.thumbnail}
-                    alt={post.title}
-                    className="w-full h-32 md:h-48 object-cover"
-                  />
-                  <div
-                    className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-all duration-300"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
-                    }}
-                  ></div>
-                  <div className="absolute top-2 right-2">
-                    <div className="bg-white/20 backdrop-blur-sm rounded-full p-1">
-                      <MoreHorizontal className="w-4 h-4 text-white" />
-                    </div>
-                  </div>
-                  <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-lg font-semibold">
-                    {post.duration}
-                  </div>
-                  <div className="absolute bottom-2 left-2">
-                    <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
-                      <Play className="w-4 h-4 md:w-6 md:h-6 text-white" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-gray-800 text-xs md:text-sm line-clamp-2 group-hover:text-purple-600 transition-colors leading-tight">
-                    {post.title}
-                  </h4>
-
-                  <div className="flex items-center justify-between text-xs text-gray-600">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex items-center">
-                        <Heart className="w-3 h-3 mr-1 text-red-400" />
-                        <span className="font-medium">
-                          {formatNumber(post.likes)}
-                        </span>
+            {isLoading
+              ? // Show 4 skeleton posts while loading
+                Array.from({ length: 4 }).map((_, index) => (
+                  <PostSkeleton key={index} />
+                ))
+              : posts.map((post) => (
+                  <div key={post.id} className="group cursor-pointer">
+                    <div
+                      className="relative rounded-xl overflow-hidden mb-3 transform group-hover:scale-105 transition-all duration-300 shadow-lg group-hover:shadow-xl"
+                      onClick={handleThumbnailClick}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleThumbnailClick();
+                        }
+                      }}
+                      aria-label={`Play video: ${post.resourceTitle}`}
+                    >
+                      <img
+                        src={post.videoResource.thumbnail.imageUrl}
+                        alt={post.resourceTitle}
+                        className="w-full h-32 md:h-48 object-cover border border-gray-200 transition-transform duration-200 group-hover:scale-105 group-hover:shadow-md"
+                      />
+                      <div
+                        className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-all duration-300"
+                        // style={{
+                        //   background:
+                        //     "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
+                        // }}
+                      ></div>
+                      <div className="absolute top-2 right-2">
+                        {/* <div className="bg-white/20 backdrop-blur-sm rounded-full p-1">
+                        <MoreHorizontal className="w-4 h-4 text-white" />
+                      </div> */}
                       </div>
-                      <div className="flex items-center">
-                        <MessageCircle className="w-3 h-3 mr-1 text-blue-400" />
-                        <span className="font-medium">
-                          {formatNumber(post.comments)}
-                        </span>
+                      <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-lg font-semibold">
+                        {post.videoResource.VideoLength}
+                      </div>
+                      <div className="absolute bottom-2 left-2">
+                        <div className="bg-black/40 backdrop-blur-sm rounded-full p-2 ">
+                          <Play className="w-4 h-4 md:w-6 md:h-6 text-white" />
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center text-xs text-gray-500">
-                    <Calendar className="w-3 h-3 mr-1" />
-                    <span className="truncate font-medium">{post.posted}</span>
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-gray-800 text-xs md:text-sm line-clamp-2  transition-colors leading-tight">
+                        {post.resourceTitle}
+                      </h4>
+
+                      <div className="flex items-center justify-between text-xs text-gray-600">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center">
+                            <Heart className="w-3 h-3 mr-1 text-red-400" />
+                            <span className="font-medium">
+                              {formatNumber(post._count.ViewerLikesOnResource)}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <MessageCircle className="w-3 h-3 mr-1 text-blue-400" />
+                            <span className="font-medium">
+                              {formatNumber(
+                                post._count.ViewerCommentsOnResource
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {post.createdAt && (
+                        <div className="flex items-center text-xs text-gray-500">
+                          <Calendar className="w-3 h-3 mr-1" />
+                          <span className="truncate font-medium">
+                            {new Date(post.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                ))}
           </div>
+          {posts.length === 0 && (
+            <div className="text-center py-12">
+              <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-base font-semibold text-gray-900 mb-2">
+                No posts found
+              </h3>
+              <p className="text-gray-500 text-sm">
+                Try adjusting your filters or search terms
+              </p>
+            </div>
+          )}
         </div>
       </div>
+      <VideoPlayerDialog
+        src="https://adbox-bucket.s3.us-east-1.amazonaws.com/videos/0e4c37b8-5e2c-477d-996f-50a618ebd134/hls/master.m3u8"
+        isOpen={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        companyLogo="https://placehold.co/100x100.png"
+        companyName="MingoBlox"
+        videoTitle="Getting Started with Our Platform"
+        videoDescription="This video walks you through the basics of using our dashboard, managing content, and understanding the key features."
+      />
     </div>
   );
 }

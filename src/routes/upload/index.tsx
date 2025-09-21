@@ -127,7 +127,7 @@ function VideoUploads() {
               );
               setUploadProgress(percentCompleted);
               if (percentCompleted === 100) {
-                console.log("Upload completed, processing...");
+                // console.log("Upload completed, processing...");
               }
             }
           },
@@ -138,13 +138,14 @@ function VideoUploads() {
         }
       );
 
-      console.log("Upload successful:", response.data);
+      // console.log("Upload successful:", response.data);
 
       // ✅ Capture videoId from backend response
       if (response.data?.id) {
         setVideoId(response.data.id);
       }
-      toast.success("✅ Video uploaded successfully!");
+      toast.info("Upload successful");
+
       setIsUploading(false);
     } catch (error: any) {
       // const message =
@@ -189,8 +190,7 @@ function VideoUploads() {
         correctAnswerText: correctAnswer,
         wrongAnswerTexts: [wrongAnswer1, wrongAnswer2],
       });
-      toast.success("✅ Questions uploaded successfully!");
-
+      toast.info("Questions uploaded successfully!");
       // reset quiz form
       setQuizQuestion("");
       setCorrectAnswer("");

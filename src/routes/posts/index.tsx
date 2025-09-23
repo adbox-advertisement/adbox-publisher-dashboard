@@ -9,12 +9,12 @@ import {
   Search,
   Edit3,
   Trash2,
-  Download,
   Lock,
   Globe,
   Filter,
   X,
   Loader2,
+  Zap,
 } from "lucide-react";
 import {
   Dialog,
@@ -28,18 +28,34 @@ import {
 import { useSocket } from "../../context/SocketContext";
 import type { Post, SortBy, SortOrder } from "../../components/post/interface";
 import { SkeletonCard } from "../../components/post/skeleton";
-// import { mockPosts } from "../../components/post/post";
 import ApiService from "@/helpers/api.service";
 import { toast } from "sonner";
 import { Storage } from "@/helpers/local.storage";
 import { VideoPlayerDialog } from "@/components/post/player";
+import EditVideoPlayerDialog from "@/components/post/edit";
+
+// Campaign Chip Component
+const CampaignChip = () => (
+  <div className="relative flex items-center">
+    <div className="relative">
+      {/* Beeping animation rings */}
+      <div className="absolute -inset-1 bg-gradient-to-r from-orange-400 to-red-500 rounded-full opacity-75 animate-ping"></div>
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-400 to-red-500 rounded-full opacity-50 animate-pulse"></div>
+      {/* Main chip */}
+      <div className="relative bg-gradient-to-r from-orange-500 to-red-500 text-white px-2 py-1 rounded-full shadow-lg flex items-center gap-1 text-xs sm:px-3 sm:gap-1.5">
+        <Zap className="w-3 h-3 animate-pulse sm:w-3 sm:h-3" />
+        <span className="font-semibold whitespace-nowrap">Go Live</span>
+      </div>
+    </div>
+  </div>
+);
 
 export const Route = createFileRoute("/posts/")({
   component: Posts,
 });
 
 function Posts(): JSX.Element {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -49,34 +65,33 @@ function Posts(): JSX.Element {
   const [activePostMenu, setActivePostMenu] = useState<number | null>(null);
   const [showUploadingSkeleton, setShowUploadingSkeleton] =
     useState<boolean>(false);
-
-  // Applied filters
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false);
+  const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
+  const [updatingPrivacyPostId, setUpdatingPrivacyPostId] = useState<
+    number | null
+  >(null);
   const [appliedMinViews, setAppliedMinViews] = useState<string>("");
   const [appliedMinLikes, setAppliedMinLikes] = useState<string>("");
   const [appliedMinComments, setAppliedMinComments] = useState<string>("");
   const [appliedPrivacyFilter, setAppliedPrivacyFilter] = useState<
     "all" | "public" | "private"
   >("all");
-
-  // Temp filters
   const [tempMinViews, setTempMinViews] = useState<string>("");
   const [tempMinLikes, setTempMinLikes] = useState<string>("");
   const [tempMinComments, setTempMinComments] = useState<string>("");
   const [tempPrivacyFilter, setTempPrivacyFilter] = useState<
     "all" | "public" | "private"
   >("all");
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
-  // Fetch posts function
   const fetchPublisherPosts = useCallback(async (isInitialLoad = false) => {
     const { id } = Storage.getPublisherId("publisherId") || {};
-
     try {
       if (isInitialLoad) {
         setIsLoading(true);
       } else {
         setIsRefreshing(true);
       }
-
       const response = await ApiService.get_api(`/resources/publisher/${id}`);
       setPosts(response.data);
       toast.info("Your Posts!!!");
@@ -90,12 +105,10 @@ function Posts(): JSX.Element {
     }
   }, []);
 
-  // Initial data fetch
   useEffect(() => {
     fetchPublisherPosts(true);
   }, [fetchPublisherPosts]);
 
-  // Socket events handling
   const { UploadingEventData, publishedVideo } = useSocket();
 
   useEffect(() => {
@@ -110,14 +123,11 @@ function Posts(): JSX.Element {
 
   useEffect(() => {
     if (publishedVideo) {
-      console.log("🚀 The video is done storing in db:", publishedVideo);
-      // Hide uploading skeleton and refresh the data
       setShowUploadingSkeleton(false);
       fetchPublisherPosts(false);
     }
   }, [publishedVideo, fetchPublisherPosts]);
 
-  // Close menu on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -129,7 +139,6 @@ function Posts(): JSX.Element {
         setActivePostMenu(null);
       }
     };
-
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, [activePostMenu]);
@@ -147,29 +156,31 @@ function Posts(): JSX.Element {
     setActivePostMenu(null);
   };
 
-  const handleEdit = (postId: number) => {
-    console.log("Edit post:", postId);
-    setActivePostMenu(null);
-  };
-
-  const handleDownload = (postId: number) => {
-    console.log("Download post:", postId);
-    setActivePostMenu(null);
-  };
-
-  const togglePrivacy = (postId: number) => {
-    setPosts(
-      posts.map((post) => {
-        if (post.id === postId) {
-          const updatedPost = { ...post, isPrivate: !post.isPrivate };
-          const action = updatedPost.isPrivate ? "private" : "public";
-          console.log(`Post "${post.resourceTitle}" is now ${action}`);
-          return updatedPost;
-        }
-        return post;
-      })
-    );
-    setActivePostMenu(null);
+  const togglePrivacy = async (postId: number) => {
+    try {
+      setUpdatingPrivacyPostId(postId);
+      const currentPost = posts.find((post) => post.id === postId);
+      if (!currentPost) {
+        toast.error("Post not found");
+        return;
+      }
+      const newStatus = currentPost.status === "private" ? "public" : "private";
+      await ApiService.put_api(`/resources/publisher/${postId}/update`, {
+        status: newStatus,
+      });
+      setPosts(
+        posts.map((post) =>
+          post.id === postId ? { ...post, status: newStatus } : post
+        )
+      );
+      toast.success(`Post made ${newStatus} successfully!`);
+    } catch (error) {
+      console.error("Failed to update post privacy:", error);
+      toast.error("Failed to update post privacy. Please try again.");
+    } finally {
+      setUpdatingPrivacyPostId(null);
+      setActivePostMenu(null);
+    }
   };
 
   const openFiltersDialog = () => {
@@ -244,9 +255,8 @@ function Posts(): JSX.Element {
         post._count.ViewerCommentsOnResource >= parseInt(appliedMinComments);
       const matchesPrivacy =
         appliedPrivacyFilter === "all" ||
-        (appliedPrivacyFilter === "public" && !post.isPrivate) ||
-        (appliedPrivacyFilter === "private" && post.isPrivate);
-
+        (appliedPrivacyFilter === "public" && post.status === "public") ||
+        (appliedPrivacyFilter === "private" && post.status === "private");
       return (
         matchesSearch &&
         matchesViews &&
@@ -257,7 +267,6 @@ function Posts(): JSX.Element {
     })
     .sort((a, b) => {
       let aVal: number, bVal: number;
-
       switch (sortBy) {
         case "views":
           aVal = a._count.ViewerViewsOnResource;
@@ -278,14 +287,17 @@ function Posts(): JSX.Element {
         default:
           return 0;
       }
-
       return sortOrder === "desc" ? bVal - aVal : aVal - bVal;
     });
 
-  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
-
-  const handleThumbnailClick = (): void => {
+  const handleThumbnailClick = (postId: number): void => {
+    setSelectedPostId(postId);
     setIsDialogOpen(true);
+  };
+
+  const handleEditClick = (postId: number): void => {
+    setSelectedPostId(postId);
+    setIsEditDialogOpen(true);
   };
 
   return (
@@ -296,7 +308,6 @@ function Posts(): JSX.Element {
           <h1 className="text-lg font-bold text-gray-900 mb-4 sm:text-xl">
             My Posts
           </h1>
-
           {/* Search Bar */}
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -309,7 +320,6 @@ function Posts(): JSX.Element {
               disabled={isLoading}
             />
           </div>
-
           {/* Controls Row */}
           <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
             <Dialog
@@ -333,7 +343,6 @@ function Posts(): JSX.Element {
                   )}
                 </button>
               </DialogTrigger>
-
               <DialogContent className="w-[95vw] max-w-md mx-auto bg-white backdrop-blur-sm rounded-2xl">
                 <DialogHeader className="text-left">
                   <DialogTitle className="text-base font-semibold text-gray-900">
@@ -344,7 +353,6 @@ function Posts(): JSX.Element {
                     results.
                   </DialogDescription>
                 </DialogHeader>
-
                 <div className="space-y-6 py-4">
                   <div className="space-y-5">
                     <div>
@@ -366,7 +374,6 @@ function Posts(): JSX.Element {
                           : "No minimum"}
                       </p>
                     </div>
-
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-2">
                         Minimum Likes
@@ -386,7 +393,6 @@ function Posts(): JSX.Element {
                           : "No minimum"}
                       </p>
                     </div>
-
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-2">
                         Minimum Comments
@@ -407,7 +413,6 @@ function Posts(): JSX.Element {
                       </p>
                     </div>
                   </div>
-
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-2">
                       Privacy
@@ -433,7 +438,6 @@ function Posts(): JSX.Element {
                     </div>
                   </div>
                 </div>
-
                 <DialogFooter className="flex flex-col gap-3 pt-4">
                   <button
                     onClick={clearAllFilters}
@@ -450,8 +454,29 @@ function Posts(): JSX.Element {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            <div className="flex items-center gap-2">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortBy)}
+                disabled={isLoading}
+                className="px-3 py-2 bg-white border border-gray-200 rounded-xl text-gray-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              >
+                <option value="date">Sort by Date</option>
+                <option value="views">Sort by Views</option>
+                <option value="likes">Sort by Likes</option>
+                <option value="comments">Sort by Comments</option>
+              </select>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+                disabled={isLoading}
+                className="px-3 py-2 bg-white border border-gray-200 rounded-xl text-gray-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              >
+                <option value="desc">Descending</option>
+                <option value="asc">Ascending</option>
+              </select>
+            </div>
           </div>
-
           {hasActiveFilters() && (
             <div className="flex flex-wrap gap-2 mt-4">
               {appliedMinViews && (
@@ -501,7 +526,6 @@ function Posts(): JSX.Element {
             </div>
           )}
         </div>
-
         {/* Loading State */}
         {isLoading && (
           <div className="flex items-center justify-center py-12">
@@ -513,11 +537,9 @@ function Posts(): JSX.Element {
             </div>
           </div>
         )}
-
         {/* Posts List */}
         {!isLoading && (
           <div className="space-y-3">
-            {/* Show refreshing indicator */}
             {isRefreshing && (
               <div className="flex items-center justify-center py-4">
                 <div className="flex items-center space-x-2 bg-purple-50 px-4 py-2 rounded-full">
@@ -528,8 +550,6 @@ function Posts(): JSX.Element {
                 </div>
               </div>
             )}
-
-            {/* Show uploading skeleton when video is being uploaded */}
             {showUploadingSkeleton && (
               <div className="space-y-3">
                 {[1].map((i) => (
@@ -537,24 +557,29 @@ function Posts(): JSX.Element {
                 ))}
               </div>
             )}
-
+            {filteredPosts.length === 0 && !showUploadingSkeleton && (
+              <div className="text-center py-12">
+                <p className="text-gray-600 text-sm">
+                  No posts found matching your criteria.
+                </p>
+              </div>
+            )}
             {filteredPosts.map((post) => (
               <div
                 key={post.id}
-                className="bg-white rounded-xl border border-gray-200  transition-colors  hover:shadow-sm"
+                className="bg-white rounded-xl border border-gray-200 transition-colors hover:shadow-sm"
               >
-                <div className="p-3 ">
-                  <div className="flex items-start gap-2">
-                    {/* Thumbnail */}
+                <div className="p-3">
+                  <div className="flex items-start gap-3">
                     <div
-                      className={`relative flex-shrink-0 cursor-pointer group ${""}`}
-                      onClick={handleThumbnailClick}
+                      className="relative flex-shrink-0 cursor-pointer group"
+                      onClick={() => handleThumbnailClick(post.id)}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          handleThumbnailClick();
+                          handleThumbnailClick(post.id);
                         }
                       }}
                       aria-label={`Play video: ${post.resourceTitle}`}
@@ -562,103 +587,88 @@ function Posts(): JSX.Element {
                       <img
                         src={post.videoResource.thumbnail.imageUrl}
                         alt={post.resourceTitle}
-                        className="w-16 h-16 rounded-lg object-cover border border-gray-200 transition-transform duration-200 group-hover:scale-105 group-hover:shadow-md"
+                        className="w-20 h-20 rounded-lg object-cover border border-gray-200 transition-transform duration-200 group-hover:scale-105 group-hover:shadow-md sm:w-24 sm:h-24"
                       />
-
-                      {/* Play button overlay */}
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Play className="w-5 h-5 text-white drop-shadow-lg" />
+                        <Play className="w-6 h-6 text-white drop-shadow-lg" />
                       </div>
-
-                      {/* Video duration badge */}
                       {post.videoResource.VideoLength && (
                         <div className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded">
                           {post.videoResource.VideoLength}
                         </div>
                       )}
                     </div>
-
-                    {/* Content */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-1">
-                        <h3 className="text-gray-900 font-semibold text-sm leading-tight pr-2 line-clamp-2">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="text-gray-900 font-semibold text-sm leading-tight pr-2 line-clamp-2 sm:text-base">
                           {post.resourceTitle}
                         </h3>
-
-                        {/* More Menu */}
-                        <div className="relative">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActivePostMenu(
-                                activePostMenu === post.id ? null : post.id
-                              );
-                            }}
-                            className={`p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors post-menu-${post.id}`}
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-
-                          {/* Dropdown Menu */}
-                          {activePostMenu === post.id && (
-                            <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
-                              <button
-                                onClick={() => togglePrivacy(post.id)}
-                                className="flex items-center gap-2 w-full px-3 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors text-sm"
-                              >
-                                {post.isPrivate ? (
-                                  <>
-                                    <Globe className="w-4 h-4 text-green-600" />
-                                    <span>Make Public</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Lock className="w-4 h-4 text-red-600" />
-                                    <span>Make Private</span>
-                                  </>
-                                )}
-                              </button>
-
-                              <button
-                                onClick={() => handleEdit(post.id)}
-                                className="flex items-center gap-2 w-full px-3 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors text-sm"
-                              >
-                                <Edit3 className="w-4 h-4 text-blue-600" />
-                                <span>Edit</span>
-                              </button>
-
-                              <button
-                                onClick={() => handleDownload(post.id)}
-                                className="flex items-center gap-2 w-full px-3 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors text-sm"
-                              >
-                                <Download className="w-4 h-4 text-green-600" />
-                                <span>Download</span>
-                              </button>
-
-                              <hr className="my-1 border-gray-100" />
-
-                              <button
-                                onClick={() => handleDelete(post.id)}
-                                className="flex items-center gap-2 w-full px-3 py-2 text-left text-red-600 hover:bg-red-50 transition-colors text-sm"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                                <span>Delete</span>
-                              </button>
-                            </div>
-                          )}
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <CampaignChip />
+                          <div className="relative">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActivePostMenu(
+                                  activePostMenu === post.id ? null : post.id
+                                );
+                              }}
+                              className={`p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors post-menu-${post.id}`}
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                            {activePostMenu === post.id && (
+                              <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+                                <button
+                                  onClick={() => togglePrivacy(post.id)}
+                                  disabled={updatingPrivacyPostId === post.id}
+                                  className="flex cursor-pointer items-center gap-2 w-full px-3 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {updatingPrivacyPostId === post.id ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                                      <span>Updating...</span>
+                                    </>
+                                  ) : post.status === "private" ? (
+                                    <>
+                                      <Globe className="w-4 h-4 text-green-600" />
+                                      <span>Make Public</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Lock className="w-4 h-4 text-red-600" />
+                                      <span>Make Private</span>
+                                    </>
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => handleEditClick(post.id)}
+                                  className="flex cursor-pointer items-center gap-2 w-full px-3 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors text-sm"
+                                >
+                                  <Edit3 className="w-4 h-4 text-blue-600" />
+                                  <span>Edit</span>
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(post.id)}
+                                  className="flex cursor-pointer items-center gap-2 w-full px-3 py-2 text-left text-red-600 hover:bg-red-50 transition-colors text-sm"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-
-                      {/* Status and Date */}
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 mb-3">
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 ${
-                            post.isPrivate
+                            post.status === "private"
                               ? "bg-red-100 text-red-700"
                               : "bg-green-100 text-green-700"
                           }`}
                         >
-                          {post.isPrivate ? (
+                          {post.status === "private" ? (
                             <>
                               <Lock className="w-3 h-3" />
                               Private
@@ -670,16 +680,13 @@ function Posts(): JSX.Element {
                             </>
                           )}
                         </span>
-
                         {post.createdAt && (
                           <span className="text-gray-500 text-xs">
                             {new Date(post.createdAt).toLocaleDateString()}
                           </span>
                         )}
                       </div>
-
-                      {/* Stats */}
-                      <div className="grid grid-cols-2 gap-3 text-xs text-gray-600 sm:flex sm:gap-4">
+                      <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 mb-3 sm:flex sm:gap-4">
                         <div className="flex items-center gap-1">
                           <Eye className="w-3 h-3 text-gray-400" />
                           <span className="font-medium">
@@ -698,46 +705,76 @@ function Posts(): JSX.Element {
                             {formatNumber(post._count.ViewerCommentsOnResource)}
                           </span>
                         </div>
-                        {/* <div className="flex items-center gap-1">
-                          <Share2 className="w-3 h-3 text-gray-400" />
-                          <span className="font-medium">
-                            {formatNumber(post.shares)}
-                          </span>
-                        </div> */}
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => togglePrivacy(post.id)}
+                          disabled={updatingPrivacyPostId === post.id}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                            post.status === "private"
+                              ? "bg-green-50 text-green-700 border border-green-200 hover:bg-green-100"
+                              : "bg-red-50 text-red-700 border border-red-200 hover:bg-red-100"
+                          }`}
+                        >
+                          {updatingPrivacyPostId === post.id ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <span>Updating...</span>
+                            </>
+                          ) : post.status === "private" ? (
+                            <>
+                              <Globe className="w-3 h-3" />
+                              <span>Make Public</span>
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="w-3 h-3" />
+                              <span>Make Private</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleEditClick(post.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-all"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(post.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-all"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Delete</span>
+                        </button>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             ))}
-
-            {/* Empty State */}
-            {filteredPosts.length === 0 &&
-              !showUploadingSkeleton &&
-              !isRefreshing && (
-                <div className="text-center py-12">
-                  <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-base font-semibold text-gray-900 mb-2">
-                    No posts found
-                  </h3>
-                  <p className="text-gray-500 text-sm">
-                    Try adjusting your filters or search terms
-                  </p>
-                </div>
-              )}
           </div>
         )}
+        {/* Video Player Dialog */}
+        {selectedPostId && (
+          <VideoPlayerDialog
+            src="https://adbox-bucket.s3.us-east-1.amazonaws.com/videos/0e4c37b8-5e2c-477d-996f-50a618ebd134/hls/master.m3u8"
+            isOpen={isDialogOpen}
+            onOpenChange={setIsDialogOpen}
+            companyLogo="https://placehold.co/100x100.png"
+            companyName="Adbox Gh"
+            videoTitle="Getting Started with Our Platform"
+            videoDescription="This video walks you through the basics of using our dashboard, managing content, and understanding the key features."
+          />
+        )}
+        {/* Edit Video Dialog */}
+        {selectedPostId && (
+          <EditVideoPlayerDialog
+            isOpen={isEditDialogOpen}
+            onOpenChange={setIsEditDialogOpen}
+          />
+        )}
       </div>
-      {/* Video Player Dialog */}
-      <VideoPlayerDialog
-        src="https://adbox-bucket.s3.us-east-1.amazonaws.com/videos/0e4c37b8-5e2c-477d-996f-50a618ebd134/hls/master.m3u8"
-        isOpen={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        companyLogo="https://placehold.co/100x100.png"
-        companyName="MingoBlox"
-        videoTitle="Getting Started with Our Platform"
-        videoDescription="This video walks you through the basics of using our dashboard, managing content, and understanding the key features."
-      />
     </div>
   );
 }

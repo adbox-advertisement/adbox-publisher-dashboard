@@ -1,385 +1,357 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft, Wallet, Smartphone, CheckCircle, Plus } from "lucide-react";
+import {
+  ArrowLeft,
+  Wallet,
+  Smartphone,
+  CheckCircle,
+  Plus,
+  AlertCircle,
+  Info,
+} from "lucide-react";
 
 export const Route = createFileRoute("/wallet/")({
   component: Wallets,
 });
 
-const mobileProviders = [
-  { id: "mtn", name: "MTN Mobile Money", icon: "📱", color: "bg-yellow-500" },
-  { id: "airtel", name: "AirtelTigo Money", icon: "📲", color: "bg-red-500" },
-  { id: "vodafone", name: "Vodafone Cash", icon: "💳", color: "bg-red-600" },
-  { id: "telecel", name: "Telecel Cash", icon: "💰", color: "bg-blue-500" },
+const providers = [
+  {
+    id: "mtn",
+    name: "MTN Mobile Money",
+    short: "MTN MoMo",
+    icon: "📱",
+    color: "from-gray-400 to-gray-600",
+  },
+  {
+    id: "airtel",
+    name: "AirtelTigo Money",
+    short: "AirtelTigo",
+    icon: "📲",
+    color: "from-slate-400 to-slate-600",
+  },
+  {
+    id: "vodafone",
+    name: "Vodafone Cash",
+    short: "Vodafone",
+    icon: "💳",
+    color: "from-gray-500 to-gray-700",
+  },
+  {
+    id: "telecel",
+    name: "Telecel Cash",
+    short: "Telecel",
+    icon: "💰",
+    color: "from-zinc-400 to-zinc-600",
+  },
 ];
 
-const quickAmounts = [10, 20, 50, 100, 200, 500];
+const quickAmounts = [5, 10, 20, 50, 100, 200];
 
 function Wallets() {
-  const [selectedProvider, setSelectedProvider] = useState("");
+  const [step, setStep] = useState<
+    "select" | "confirm" | "processing" | "success"
+  >("select");
+  const [balance, setBalance] = useState(125.5);
+  const [provider, setProvider] = useState("");
   const [amount, setAmount] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [step, setStep] = useState("select"); // select, confirm, processing, success
-  const [currentBalance, setCurrentBalance] = useState(125.5);
+  const [phone, setPhone] = useState("");
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const formatCurrency = (amount: number) => `GH₵${amount.toFixed(2)}`;
-
-  const handleQuickAmount = (value: number) => {
-    setAmount(value.toString());
-  };
-
-  const handleTopUp = () => {
-    if (!selectedProvider || !amount || !phoneNumber) return;
-    setStep("confirm");
-  };
-
-  const handleConfirm = () => {
-    setStep("processing");
-    // Simulate processing
-    setTimeout(() => {
-      setStep("success");
-      setCurrentBalance((prev) => prev + parseFloat(amount));
-    }, 3000);
-  };
+  const formatMoney = (val: number) => `GH₵${val.toFixed(2)}`;
 
   const resetFlow = () => {
     setStep("select");
     setAmount("");
-    setPhoneNumber("");
-    setSelectedProvider("");
+    setPhone("");
+    setProvider("");
+    setErrors({});
   };
 
-  if (step === "success") {
+  const validate = () => {
+    const e: { [key: string]: string } = {};
+    if (!amount || parseFloat(amount) <= 0) e.amount = "Enter an amount";
+    else if (parseFloat(amount) < 1) e.amount = "Minimum GH₵1";
+    else if (parseFloat(amount) > 5000) e.amount = "Maximum GH₵5000";
+
+    if (!provider) e.provider = "Choose a provider";
+
+    if (!phone) e.phone = "Enter your phone number";
+    else if (phone.replace(/\D/g, "").length < 10)
+      e.phone = "Invalid phone number";
+
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const startTopUp = () => {
+    if (validate()) setStep("confirm");
+  };
+
+  const confirmTopUp = () => {
+    setStep("processing");
+    setTimeout(() => {
+      setBalance((b) => b + parseFloat(amount));
+      setStep("success");
+    }, 2500);
+  };
+
+  const formatPhone = (v: string) => {
+    const d = v.replace(/\D/g, "");
+    if (d.length <= 3) return d;
+    if (d.length <= 6) return `${d.slice(0, 3)} ${d.slice(3)}`;
+    return `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6, 10)}`;
+  };
+
+  const handlePhone = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhone(formatPhone(e.target.value));
+    setErrors((prev) => ({ ...prev, phone: "" }));
+  };
+
+  /** SUCCESS SCREEN */
+  if (step === "success")
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50 p-4">
-        <div className="max-w-md mx-auto pt-8">
-          <div className="text-center space-y-6">
-            <div className="w-20 h-20 mx-auto rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle className="w-12 h-12 text-green-600" />
-            </div>
-
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                Top-up Successful!
-              </h2>
-              <p className="text-gray-600">
-                Your wallet has been credited with{" "}
-                {formatCurrency(parseFloat(amount))}
-              </p>
-            </div>
-
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">New Balance</p>
-                <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                  {formatCurrency(currentBalance)}
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={resetFlow}
-              className="w-full py-3 rounded-xl font-semibold text-white transition-all duration-300 transform hover:scale-105"
-              style={{
-                background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
-              }}
-            >
-              Top-up Again
-            </button>
-          </div>
+      <div className="min-h-screen flex flex-col justify-center items-center p-6 bg-gradient-to-br from-gray-50 to-slate-100">
+        <div className="w-20 h-20 rounded-full bg-gradient-to-r from-gray-400 to-slate-500 flex items-center justify-center mb-6 animate-bounce">
+          <CheckCircle className="w-12 h-12 text-white" />
+        </div>
+        <h2 className="text-2xl font-bold mb-2">Top-up Successful 🎉</h2>
+        <p className="text-gray-600 mb-6">
+          {formatMoney(parseFloat(amount))} has been added to your wallet
+        </p>
+        <div className="bg-white p-4 rounded-2xl shadow text-center mb-6">
+          <p className="text-sm text-gray-500">New Balance</p>
+          <p className="text-3xl font-bold text-gray-700">
+            {formatMoney(balance)}
+          </p>
+        </div>
+        <div className="w-full max-w-sm space-y-3">
+          <button
+            onClick={resetFlow}
+            className="w-full py-3 rounded-xl text-white bg-gradient-to-r from-gray-500 to-slate-600 font-semibold"
+          >
+            Top-up Again
+          </button>
+          <button
+            onClick={resetFlow}
+            className="w-full py-3 rounded-xl border border-gray-300 bg-white text-gray-700 font-semibold"
+          >
+            Done
+          </button>
         </div>
       </div>
     );
-  }
 
-  if (step === "processing") {
+  /** PROCESSING SCREEN */
+  if (step === "processing")
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50 p-4 flex items-center justify-center">
-        <div className="text-center space-y-6">
-          <div className="w-20 h-20 mx-auto rounded-full bg-white/70 backdrop-blur-sm flex items-center justify-center">
-            <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen flex flex-col justify-center items-center p-6 bg-gradient-to-br from-gray-50 to-slate-100 text-center">
+        <div className="relative mb-6">
+          <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow">
+            <div className="w-10 h-10 border-4 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
           </div>
-
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">
-              Processing Payment
-            </h2>
-            <p className="text-gray-600">
-              Please check your phone for the payment prompt
-            </p>
-          </div>
-
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">
-                Amount:{" "}
-                <span className="font-semibold">
-                  {formatCurrency(parseFloat(amount))}
-                </span>
-              </p>
-              <p className="text-sm text-gray-600">
-                Provider:{" "}
-                <span className="font-semibold">
-                  {mobileProviders.find((p) => p.id === selectedProvider)?.name}
-                </span>
-              </p>
-              <p className="text-sm text-gray-600">
-                Phone: <span className="font-semibold">{phoneNumber}</span>
-              </p>
-            </div>
-          </div>
+        </div>
+        <h2 className="text-xl font-bold mb-2">Processing Payment...</h2>
+        <p className="text-gray-600 mb-6 text-sm">
+          Approve the prompt on your phone to complete this payment.
+        </p>
+        <div className="bg-white p-4 rounded-2xl shadow w-full max-w-sm space-y-2 text-left">
+          <p>
+            <span className="text-gray-500">Amount:</span>{" "}
+            <b>{formatMoney(parseFloat(amount))}</b>
+          </p>
+          <p>
+            <span className="text-gray-500">Provider:</span>{" "}
+            <b>{providers.find((p) => p.id === provider)?.short}</b>
+          </p>
+          <p>
+            <span className="text-gray-500">Phone:</span> <b>{phone}</b>
+          </p>
+        </div>
+        <div className="mt-6 text-sm text-gray-700 flex items-start max-w-sm">
+          <Info className="w-5 h-5 mr-2 mt-0.5" />
+          If you don't receive a prompt, double-check your number & balance.
         </div>
       </div>
     );
-  }
 
+  /** CONFIRM SCREEN */
   if (step === "confirm") {
+    const data = providers.find((p) => p.id === provider);
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50">
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-slate-100">
         {/* Header */}
-        <div className="bg-white/70 backdrop-blur-sm border-b border-white/20 sticky top-0 z-10">
-          <div className="px-4 py-4">
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => setStep("select")}
-                className="p-2 rounded-full hover:bg-white/50 transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-700" />
-              </button>
-              <h1 className="text-lg font-bold text-gray-800">
-                Confirm Top-up
-              </h1>
+        <div className="flex items-center p-4 border-b bg-white sticky top-0">
+          <button onClick={() => setStep("select")} className="mr-2">
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          <h1 className="font-bold">Confirm Payment</h1>
+        </div>
+
+        <div className="p-4 flex-1">
+          <div className="bg-white rounded-2xl shadow p-4 mb-4 space-y-3">
+            <h3 className="text-lg font-bold text-center">Summary</h3>
+            <p className="text-center text-2xl font-bold text-gray-700">
+              {formatMoney(parseFloat(amount))}
+            </p>
+            <div className="flex justify-between">
+              <span>Provider</span>
+              <span>
+                {data?.icon} {data?.short}
+              </span>
             </div>
+            <div className="flex justify-between">
+              <span>Phone</span>
+              <span className="font-mono">{phone}</span>
+            </div>
+            <hr />
+            <div className="flex justify-between">
+              <span>Current Balance</span>
+              <span>{formatMoney(balance)}</span>
+            </div>
+            <div className="flex justify-between font-bold">
+              <span>New Balance</span>
+              <span className="text-gray-700">
+                {formatMoney(balance + parseFloat(amount))}
+              </span>
+            </div>
+          </div>
+          <div className="bg-gray-50 p-3 rounded-xl text-sm flex items-start">
+            <AlertCircle className="w-5 h-5 text-gray-500 mr-2 mt-0.5" />
+            Approve the request only if these details match.
           </div>
         </div>
 
-        <div className="p-4 space-y-6">
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">
-              Payment Summary
-            </h3>
-
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Amount</span>
-                <span className="font-bold text-xl text-gray-800">
-                  {formatCurrency(parseFloat(amount))}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Provider</span>
-                <div className="flex items-center space-x-2">
-                  <span className="text-2xl">
-                    {
-                      mobileProviders.find((p) => p.id === selectedProvider)
-                        ?.icon
-                    }
-                  </span>
-                  <span className="font-semibold text-gray-800">
-                    {
-                      mobileProviders.find((p) => p.id === selectedProvider)
-                        ?.name
-                    }
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Phone Number</span>
-                <span className="font-semibold text-gray-800">
-                  {phoneNumber}
-                </span>
-              </div>
-
-              <hr className="border-gray-200" />
-
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Current Balance</span>
-                <span className="font-semibold text-gray-800">
-                  {formatCurrency(currentBalance)}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">New Balance</span>
-                <span className="font-bold text-xl bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                  {formatCurrency(currentBalance + parseFloat(amount))}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <button
-              onClick={handleConfirm}
-              className="w-full py-4 rounded-xl font-semibold text-white transition-all duration-300 transform hover:scale-105"
-              style={{
-                background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
-              }}
-            >
-              Confirm Payment
-            </button>
-
-            <button
-              onClick={() => setStep("select")}
-              className="w-full py-4 rounded-xl font-semibold text-gray-700 bg-white/50 backdrop-blur-sm border border-gray-200 hover:bg-white/70 transition-all duration-300"
-            >
-              Cancel
-            </button>
-          </div>
+        <div className="sticky bottom-0 p-4 bg-white border-t space-y-2">
+          <button
+            onClick={confirmTopUp}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-gray-600 to-slate-600 text-white font-bold"
+          >
+            Confirm & Pay {formatMoney(parseFloat(amount))}
+          </button>
+          <button
+            onClick={() => setStep("select")}
+            className="w-full py-3 rounded-xl bg-gray-100 text-gray-700"
+          >
+            Cancel
+          </button>
         </div>
       </div>
     );
   }
 
+  /** MAIN SELECTION SCREEN */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-slate-100">
       {/* Header */}
-      <div className="bg-white/70 backdrop-blur-sm border-b border-white/20 sticky top-0 z-10">
-        <div className="px-4 py-4">
-          <div className="flex items-center space-x-3">
-            <div
-              className="p-2 rounded-full"
-              style={{
-                background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
-              }}
-            >
-              <Wallet className="w-5 h-5 text-white" />
-            </div>
-            <h1 className="text-lg font-bold text-gray-800">Top-up Wallet</h1>
-          </div>
-        </div>
+      <div className="flex items-center p-4 border-b bg-white sticky top-0">
+        <Wallet className="w-5 h-5 text-gray-600 mr-2" />
+        <h1 className="font-bold">Top-up Wallet</h1>
       </div>
 
-      <div className="p-4 space-y-6">
-        {/* Current Balance */}
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20">
-          <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">Current Balance</p>
-            <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-              {formatCurrency(currentBalance)}
-            </p>
-          </div>
+      <div className="flex-1 p-4 space-y-6 pb-24">
+        {/* Balance */}
+        <div className="bg-white rounded-2xl shadow p-4 text-center">
+          <p className="text-sm text-gray-500">Available Balance</p>
+          <p className="text-3xl font-bold text-gray-700">
+            {formatMoney(balance)}
+          </p>
         </div>
 
-        {/* Amount Selection */}
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">
-            Select Amount
-          </h3>
-
-          {/* Quick Amount Buttons */}
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            {quickAmounts.map((value) => (
+        {/* Amount */}
+        <div className="bg-white rounded-2xl shadow p-4">
+          <h3 className="font-semibold mb-3">Amount</h3>
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            {quickAmounts.map((val) => (
               <button
-                key={value}
-                onClick={() => handleQuickAmount(value)}
-                className={`py-3 rounded-xl font-semibold transition-all duration-300 border-2 ${
-                  amount === value.toString()
-                    ? "text-white transform scale-105 border-purple-400"
-                    : "text-gray-700 bg-white/50 hover:bg-white/70 border-gray-200 hover:border-purple-300"
+                key={val}
+                onClick={() => setAmount(val.toString())}
+                className={`py-3 rounded-xl font-semibold ${
+                  amount === val.toString()
+                    ? "bg-gray-600 text-white"
+                    : "bg-gray-100 text-gray-700"
                 }`}
-                style={
-                  amount === value.toString()
-                    ? {
-                        background:
-                          "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
-                      }
-                    : {}
-                }
               >
-                {formatCurrency(value)}
+                {val}
               </button>
             ))}
           </div>
-
-          {/* Custom Amount Input */}
-          <div className="relative">
-            <input
-              type="number"
-              placeholder="Enter custom amount"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-white/50 backdrop-blur-sm border border-gray-200 focus:ring-2 focus:ring-purple-400 focus:outline-none placeholder-gray-500"
-            />
-            <div className="absolute right-3 top-3 text-gray-500 text-sm">
-              GH₵
-            </div>
-          </div>
+          <input
+            type="number"
+            placeholder="Custom amount"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="w-full px-3 py-3 border border-gray-200 rounded-xl focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
+          />
+          {errors.amount && (
+            <p className="text-red-500 text-sm mt-1">{errors.amount}</p>
+          )}
         </div>
 
-        {/* Mobile Provider Selection */}
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">
-            Select Provider
-          </h3>
-
-          <div className="space-y-3">
-            {mobileProviders.map((provider) => (
+        {/* Provider */}
+        <div className="bg-white rounded-2xl shadow p-4">
+          <h3 className="font-semibold mb-3">Provider</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {providers.map((p) => (
               <button
-                key={provider.id}
-                onClick={() => setSelectedProvider(provider.id)}
-                className={`w-full p-4 rounded-xl border-2 transition-all duration-300 ${
-                  selectedProvider === provider.id
-                    ? "border-purple-400 bg-purple-50/50 transform scale-105"
-                    : "border-gray-200 bg-white/30 hover:bg-white/50"
+                key={p.id}
+                onClick={() => setProvider(p.id)}
+                className={`flex flex-col items-center py-4 rounded-xl border ${
+                  provider === p.id
+                    ? "border-gray-500 bg-gray-50"
+                    : "border-gray-200 bg-gray-25"
                 }`}
               >
-                <div className="flex items-center space-x-4">
-                  <div className="text-2xl">{provider.icon}</div>
-                  <div className="text-left">
-                    <p className="font-semibold text-gray-800">
-                      {provider.name}
-                    </p>
-                  </div>
-                  {selectedProvider === provider.id && (
-                    <CheckCircle className="w-5 h-5 text-purple-600 ml-auto" />
-                  )}
+                <div
+                  className={`w-10 h-10 rounded-xl bg-gradient-to-r ${p.color} flex items-center justify-center`}
+                >
+                  <span>{p.icon}</span>
                 </div>
+                <span className="text-sm mt-2">{p.short}</span>
               </button>
             ))}
           </div>
+          {errors.provider && (
+            <p className="text-red-500 text-sm mt-1">{errors.provider}</p>
+          )}
         </div>
 
-        {/* Phone Number Input */}
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Phone Number</h3>
-
+        {/* Phone */}
+        <div className="bg-white rounded-2xl shadow p-4">
+          <h3 className="font-semibold mb-3">Phone Number</h3>
           <div className="relative">
             <Smartphone className="absolute left-3 top-3 w-5 h-5 text-gray-500" />
             <input
               type="tel"
               placeholder="0XX XXX XXXX"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/50 backdrop-blur-sm border border-gray-200 focus:ring-2 focus:ring-purple-400 focus:outline-none placeholder-gray-500"
+              value={phone}
+              onChange={handlePhone}
+              maxLength={13}
+              className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl font-mono focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
             />
           </div>
+          {errors.phone && (
+            <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
+          )}
         </div>
+      </div>
 
-        {/* Top-up Button */}
+      {/* Bottom Button */}
+      <div className="sticky bottom-0 bg-white border-t p-4">
         <button
-          onClick={handleTopUp}
-          disabled={!selectedProvider || !amount || !phoneNumber}
-          className={`w-full py-4 rounded-xl font-semibold transition-all duration-300 ${
-            !selectedProvider || !amount || !phoneNumber
-              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-              : "text-white transform hover:scale-105"
+          onClick={startTopUp}
+          disabled={!amount || !provider || !phone}
+          className={`w-full py-3 rounded-xl font-bold flex items-center justify-center space-x-2 ${
+            !amount || !provider || !phone
+              ? "bg-gray-200 text-gray-400"
+              : "bg-gradient-to-r from-gray-600 to-slate-600 text-white"
           }`}
-          style={
-            selectedProvider && amount && phoneNumber
-              ? {
-                  background:
-                    "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
-                }
-              : {}
-          }
         >
-          <div className="flex items-center justify-center space-x-2">
-            <Plus className="w-5 h-5" />
-            <span>Top-up Wallet</span>
-          </div>
+          <Plus className="w-5 h-5" />
+          <span>
+            {amount
+              ? `Top-up ${formatMoney(parseFloat(amount))}`
+              : "Top-up Wallet"}
+          </span>
         </button>
       </div>
     </div>

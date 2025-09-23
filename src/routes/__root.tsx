@@ -56,15 +56,6 @@ export const Route = createRootRoute({
       }
     }, [connection]);
 
-    useEffect(() => {
-      const subscription = socketService.listener$.subscribe((response) => {
-        if (response["listener"] === "connection") {
-          setConnection(response.data.stage as ConnectionEnum);
-        }
-      });
-
-      return () => subscription.unsubscribe();
-    }, []);
     return (
       <>
         <Toaster position="bottom-right" richColors />

@@ -39,10 +39,10 @@ const CampaignChip = () => (
   <div className="relative flex items-center">
     <div className="relative">
       {/* Beeping animation rings */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-orange-400 to-red-500 rounded-full opacity-75 animate-ping"></div>
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-400 to-red-500 rounded-full opacity-50 animate-pulse"></div>
+      <div className="absolute -inset-1 bg-gradient-to-r from-purple-400 to-violet-500 rounded-full opacity-75 animate-ping"></div>
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-400 to-violet-500 rounded-full opacity-50 animate-pulse"></div>
       {/* Main chip */}
-      <div className="relative bg-gradient-to-r from-orange-500 to-red-500 text-white px-2 py-1 rounded-full shadow-lg flex items-center gap-1 text-xs sm:px-3 sm:gap-1.5">
+      <div className="relative bg-gradient-to-r from-purple-500 to-violet-600 text-white px-2 py-1 rounded-full shadow-lg flex items-center gap-1 text-xs sm:px-3 sm:gap-1.5">
         <Zap className="w-3 h-3 animate-pulse sm:w-3 sm:h-3" />
         <span className="font-semibold whitespace-nowrap">Go Live</span>
       </div>

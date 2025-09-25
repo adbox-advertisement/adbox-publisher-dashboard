@@ -97,7 +97,6 @@ function Posts(): JSX.Element {
       toast.info("Your Posts!!!");
       console.log("response : ", response.data);
     } catch (error) {
-      toast.error(`❌ Upload failed`);
       console.error("Upload failed:", error);
     } finally {
       setIsLoading(false);

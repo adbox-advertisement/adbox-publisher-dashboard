@@ -61,7 +61,6 @@ function Index() {
         toast.info("Your recent Posts!");
         setIsLoading(false);
       } catch (error) {
-        toast.error(`❌ Upload failed`);
         console.error("Upload failed:", error);
       }
     }

@@ -18,6 +18,8 @@ import { Route as PostsIndexRouteImport } from './routes/posts/index'
 import { Route as CommentsIndexRouteImport } from './routes/comments/index'
 import { Route as AnalyticsIndexRouteImport } from './routes/analytics/index'
 import { Route as CampaignIndexRouteImport } from './routes/Campaign/index'
+import { Route as TransactionsTransactionsRouteImport } from './routes/transactions/transactions'
+import { Route as CampaignHistoryCampaignHistoryRouteImport } from './routes/campaignHistory/campaignHistory'
 
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
@@ -64,10 +66,24 @@ const CampaignIndexRoute = CampaignIndexRouteImport.update({
   path: '/Campaign/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TransactionsTransactionsRoute =
+  TransactionsTransactionsRouteImport.update({
+    id: '/transactions/transactions',
+    path: '/transactions/transactions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const CampaignHistoryCampaignHistoryRoute =
+  CampaignHistoryCampaignHistoryRouteImport.update({
+    id: '/campaignHistory/campaignHistory',
+    path: '/campaignHistory/campaignHistory',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/campaignHistory/campaignHistory': typeof CampaignHistoryCampaignHistoryRoute
+  '/transactions/transactions': typeof TransactionsTransactionsRoute
   '/Campaign': typeof CampaignIndexRoute
   '/analytics': typeof AnalyticsIndexRoute
   '/comments': typeof CommentsIndexRoute
@@ -79,6 +95,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/campaignHistory/campaignHistory': typeof CampaignHistoryCampaignHistoryRoute
+  '/transactions/transactions': typeof TransactionsTransactionsRoute
   '/Campaign': typeof CampaignIndexRoute
   '/analytics': typeof AnalyticsIndexRoute
   '/comments': typeof CommentsIndexRoute
@@ -91,6 +109,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/campaignHistory/campaignHistory': typeof CampaignHistoryCampaignHistoryRoute
+  '/transactions/transactions': typeof TransactionsTransactionsRoute
   '/Campaign/': typeof CampaignIndexRoute
   '/analytics/': typeof AnalyticsIndexRoute
   '/comments/': typeof CommentsIndexRoute
@@ -104,6 +124,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/campaignHistory/campaignHistory'
+    | '/transactions/transactions'
     | '/Campaign'
     | '/analytics'
     | '/comments'
@@ -115,6 +137,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/campaignHistory/campaignHistory'
+    | '/transactions/transactions'
     | '/Campaign'
     | '/analytics'
     | '/comments'
@@ -126,6 +150,8 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/campaignHistory/campaignHistory'
+    | '/transactions/transactions'
     | '/Campaign/'
     | '/analytics/'
     | '/comments/'
@@ -138,6 +164,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  CampaignHistoryCampaignHistoryRoute: typeof CampaignHistoryCampaignHistoryRoute
+  TransactionsTransactionsRoute: typeof TransactionsTransactionsRoute
   CampaignIndexRoute: typeof CampaignIndexRoute
   AnalyticsIndexRoute: typeof AnalyticsIndexRoute
   CommentsIndexRoute: typeof CommentsIndexRoute
@@ -212,12 +240,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CampaignIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/transactions/transactions': {
+      id: '/transactions/transactions'
+      path: '/transactions/transactions'
+      fullPath: '/transactions/transactions'
+      preLoaderRoute: typeof TransactionsTransactionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/campaignHistory/campaignHistory': {
+      id: '/campaignHistory/campaignHistory'
+      path: '/campaignHistory/campaignHistory'
+      fullPath: '/campaignHistory/campaignHistory'
+      preLoaderRoute: typeof CampaignHistoryCampaignHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  CampaignHistoryCampaignHistoryRoute: CampaignHistoryCampaignHistoryRoute,
+  TransactionsTransactionsRoute: TransactionsTransactionsRoute,
   CampaignIndexRoute: CampaignIndexRoute,
   AnalyticsIndexRoute: AnalyticsIndexRoute,
   CommentsIndexRoute: CommentsIndexRoute,

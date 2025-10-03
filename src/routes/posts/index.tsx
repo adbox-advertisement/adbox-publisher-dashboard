@@ -4,7 +4,6 @@ import {
   Eye,
   Heart,
   MessageCircle,
-  MoreVertical,
   Play,
   Search,
   Edit3,
@@ -36,7 +35,7 @@ import EditVideoPlayerDialog from "@/components/post/edit";
 
 // Campaign Chip Component
 const CampaignChip = () => (
-  <div className="relative flex items-center">
+  <div className="relative mr-4 mt-4 flex items-center ">
     <div className="relative">
       {/* Beeping animation rings */}
       <div className="absolute -inset-1 bg-gradient-to-r from-purple-400 to-violet-500 rounded-full opacity-75 animate-ping"></div>
@@ -598,66 +597,11 @@ function Posts(): JSX.Element {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-2">
+                      <div className="flex  items-start justify-between mb-2">
                         <h3 className="text-gray-900 font-semibold text-sm leading-tight pr-2 line-clamp-2 sm:text-base">
                           {post.resourceTitle}
                         </h3>
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <CampaignChip />
-                          <div className="relative">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActivePostMenu(
-                                  activePostMenu === post.id ? null : post.id
-                                );
-                              }}
-                              className={`p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors post-menu-${post.id}`}
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                            {activePostMenu === post.id && (
-                              <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
-                                <button
-                                  onClick={() => togglePrivacy(post.id)}
-                                  disabled={updatingPrivacyPostId === post.id}
-                                  className="flex cursor-pointer items-center gap-2 w-full px-3 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  {updatingPrivacyPostId === post.id ? (
-                                    <>
-                                      <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                                      <span>Updating...</span>
-                                    </>
-                                  ) : post.status === "private" ? (
-                                    <>
-                                      <Globe className="w-4 h-4 text-green-600" />
-                                      <span>Make Public</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Lock className="w-4 h-4 text-red-600" />
-                                      <span>Make Private</span>
-                                    </>
-                                  )}
-                                </button>
-                                <button
-                                  onClick={() => handleEditClick(post.id)}
-                                  className="flex cursor-pointer items-center gap-2 w-full px-3 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors text-sm"
-                                >
-                                  <Edit3 className="w-4 h-4 text-blue-600" />
-                                  <span>Edit</span>
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(post.id)}
-                                  className="flex cursor-pointer items-center gap-2 w-full px-3 py-2 text-left text-red-600 hover:bg-red-50 transition-colors text-sm"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                  <span>Delete</span>
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                        <CampaignChip />
                       </div>
                       <div className="flex items-center gap-2 mb-3">
                         <span

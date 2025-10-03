@@ -8,12 +8,16 @@ import {
   FiMessageCircle,
   FiMenu,
   FiX,
+  FiPlusCircle,
+  FiClock,
+  FiChevronDown,
+  FiDollarSign,
 } from "react-icons/fi";
 import {
   HiOutlineWallet,
   HiOutlineClipboardDocumentList,
 } from "react-icons/hi2";
-import { Toaster, toast } from "sonner"; // 👈 use toast from sonner
+import { Toaster, toast } from "sonner";
 import { socketService } from "../sockets/connections";
 import { ConnectionEnum } from "../sockets/types/socket";
 import { Storage } from "../helpers/local.storage";
@@ -21,10 +25,14 @@ import { Storage } from "../helpers/local.storage";
 export const Route = createRootRoute({
   component: () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isCampaignExpanded, setIsCampaignExpanded] = useState(false);
+    const [isFinanceExpanded, setIsFinanceExpanded] = useState(false);
     const [connection, setConnection] = useState<ConnectionEnum>(
       ConnectionEnum.connected
     );
     const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+    const toggleCampaign = () => setIsCampaignExpanded(!isCampaignExpanded);
+    const toggleFinance = () => setIsFinanceExpanded(!isFinanceExpanded);
     const { id: publisherId } = Storage.getPublisherId("publisherId") || {};
 
     useEffect(() => {
@@ -127,22 +135,86 @@ export const Route = createRootRoute({
                   Post
                 </Link>
 
-                <Link
-                  to="/wallet"
-                  className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <HiOutlineWallet className="w-4 h-4" />
-                  Wallet
-                </Link>
-                <Link
-                  to="/Campaign"
-                  className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <HiOutlineWallet className="w-4 h-4" />
-                  Create Campaign
-                </Link>
+                {/* Finance Section with Dropdown */}
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={toggleFinance}
+                    className=" cursor-pointer border border-gray-300 rounded-lg px-4 py-2 flex items-center justify-between hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FiDollarSign className="w-4 h-4" />
+                      <span>Finance</span>
+                    </div>
+                    <FiChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        isFinanceExpanded ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {/* Dropdown Items */}
+                  {isFinanceExpanded && (
+                    <div className="flex flex-col gap-1 ml-3 mt-1 border-l-2 border-gray-200 pl-3">
+                      <Link
+                        to="/wallet"
+                        className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700 text-[14px] md:text-[16px]"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <HiOutlineWallet className="w-4 h-4" />
+                        Wallet
+                      </Link>
+                      <Link
+                        to="/transactions/transactions"
+                        className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700 text-[14px] md:text-[16px]"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <FiBarChart className="w-4 h-4" />
+                        Transactions
+                      </Link>
+                    </div>
+                  )}
+                </div>
+
+                {/* Campaign Section with Dropdown */}
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={toggleCampaign}
+                    className="cursor-pointer border border-gray-300 rounded-lg px-4 py-2 flex items-center justify-between hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FiPlusCircle className="w-4 h-4" />
+                      <span>Campaigns</span>
+                    </div>
+                    <FiChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        isCampaignExpanded ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {/* Dropdown Items */}
+                  {isCampaignExpanded && (
+                    <div className="flex flex-col gap-1 ml-3 mt-1 border-l-2 border-gray-200 pl-3">
+                      <Link
+                        to="/Campaign"
+                        className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700 text-[14px] md:text-[16px]"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <FiPlusCircle className="w-4 h-4" />
+                        Create New
+                      </Link>
+                      <Link
+                        to="/campaignHistory/campaignHistory"
+                        className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700 text-[14px] md:text-[16px]"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <FiClock className="w-4 h-4" />
+                        History
+                      </Link>
+                    </div>
+                  )}
+                </div>
+
                 <Link
                   to="/survey"
                   className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
@@ -159,14 +231,6 @@ export const Route = createRootRoute({
                 >
                   <FiMessageCircle className="w-4 h-4" />
                   Comments
-                </Link>
-                <Link
-                  to="/analytics"
-                  className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <FiBarChart className="w-4 h-4" />
-                  View analytics
                 </Link>
               </main>
             </section>

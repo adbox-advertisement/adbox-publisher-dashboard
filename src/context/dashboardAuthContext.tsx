@@ -171,7 +171,7 @@ export const DashboardAuthProvider: React.FC<DashboardAuthProviderProps> = ({
         } else {
           token = localStorage.getItem("authToken");
           if (token) {
-            console.log("Token retrieved from localStorage");
+            // console.log("Token retrieved from localStorage");
           } else {
             console.log("No authentication token found");
           }

@@ -54,13 +54,10 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     });
 
     newSocket.on("uploaded-to-s3", (data: any) => {
-      console.log("Tooooooo s3", data);
       setUploadedTos3(data);
     });
 
     newSocket.on("published", (data: any) => {
-      console.log("published ", data);
-
       setpublishedVideo(data);
     });
 

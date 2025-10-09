@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import {
   FiUpload,
   FiHome,
-  FiFileText,
   FiBarChart,
   FiMessageCircle,
   FiMenu,
@@ -21,6 +20,7 @@ import { Toaster, toast } from "sonner";
 import { socketService } from "../sockets/connections";
 import { ConnectionEnum } from "../sockets/types/socket";
 import { Storage } from "../helpers/local.storage";
+import { Zap } from "lucide-react";
 
 export const Route = createRootRoute({
   component: () => {
@@ -131,8 +131,8 @@ export const Route = createRootRoute({
                   className="[&.active]:bg-gradient-to-r [&.active]:from-[#764ba2] [&.active]:to-[#667eea] [&.active]:text-white [&.active]:border-transparent border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-gradient-to-r hover:from-[rgba(118,75,162,0.1)] hover:to-[rgba(102,126,234,0.1)] hover:border-[#764ba2] hover:text-[#764ba2] transition-all duration-200 text-gray-700"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  <FiFileText className="w-4 h-4" />
-                  Post
+                  <Zap className="w-4 h-4 sm:w-4 sm:h-4 text-orange-500 animate-pulse drop-shadow-[0_0_8px_#ff8800]" />
+                  Live Post
                 </Link>
 
                 {/* Finance Section with Dropdown */}

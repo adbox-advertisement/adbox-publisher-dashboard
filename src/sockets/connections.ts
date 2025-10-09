@@ -28,13 +28,13 @@ const initSocket = () => {
   });
 
   socket.on("connect", () => {
-    console.log("Socket connected:", socket?.id);
+    // console.log("Socket connected:", socket?.id);
     listenerSubject.next({
       listener: "connection",
       data: { stage: ConnectionEnum.connected },
     });
     if (socket) {
-      console.log("Emitting join for publisherId:", publisherId);
+      // console.log("Emitting join for publisherId:", publisherId);
       socket.emit("join", `${publisherId}`);
     }
   });
@@ -62,8 +62,8 @@ const initSocket = () => {
     console.error("Socket connection error:", error);
   });
 
-  socket.on("joinedRoom", (data) => {
-    console.log(data.message);
+  socket.on("joinedRoom", (__) => {
+    // console.log(data.message);
   });
 
   return socket;

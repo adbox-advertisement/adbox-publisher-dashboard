@@ -332,13 +332,13 @@ export function LivePost() {
 
       {showUploadingSkeleton && <CampaignSkeletonDemo />}
 
-      {filteredCampaigns.length === 0 && !showUploadingSkeleton && (
+      {/* {filteredCampaigns.length === 0 && !showUploadingSkeleton && (
         <div className="text-center py-12">
           <p className="text-gray-600 text-sm">
             No posts found matching your criteria.
           </p>
         </div>
-      )}
+      )} */}
 
       {isLoading && !showUploadingSkeleton && <CampaignSkeletonDemo />}
 

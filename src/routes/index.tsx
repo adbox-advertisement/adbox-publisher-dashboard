@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { VideoPlayerDialog } from "@/components/post/player";
 import { Link } from "@tanstack/react-router";
 import { PostSkeleton } from "@/components/indexPage/Recentskeleton";
+import { formatDate } from "@/helpers/utilFunctions";
 export const Route = createFileRoute("/")({
   component: Index,
 });
@@ -415,7 +416,7 @@ function Index() {
                         <div className="flex items-center text-xs text-gray-500">
                           <Calendar className="w-3 h-3 mr-1" />
                           <span className="truncate font-medium">
-                            {new Date(post.createdAt).toLocaleDateString()}
+                            {formatDate(post.createdAt)}
                           </span>
                         </div>
                       )}

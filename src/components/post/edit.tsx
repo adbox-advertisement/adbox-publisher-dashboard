@@ -1,32 +1,12 @@
-import { useEffect, useState, useRef } from "react";
-import {
-  Heart,
-  MessageCircle,
-  MoreHorizontal,
-  Play,
-  Pause,
-  Volume2,
-  VolumeX,
-  X,
-  Check,
-  AlertCircle,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { X, Check, Save, FileText, HelpCircle } from "lucide-react";
 
 interface VideoPlayerDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-interface Reel {
-  id: string;
-  username: string;
-  avatar: string;
-  likes: string;
-  comments: string;
-  caption: string;
-  isPlaying: boolean;
-  isMuted: boolean;
-  videoUrl: string;
+interface VideoData {
   title: string;
   description: string;
   status: "public" | "private";
@@ -38,8 +18,8 @@ export default function EditVideoPlayerDialog({
 }: VideoPlayerDialogProps) {
   const [shouldRender, setShouldRender] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [activeTab, setActiveTab] = useState<"video" | "edit" | "quiz">("edit");
-  const [isVideoUploadComplete] = useState(true); // Simulated state
+  const [activeTab, setActiveTab] = useState<"edit" | "quiz">("edit");
+  const [isVideoUploadComplete] = useState(true);
 
   // Quiz states
   const [quizQuestion, setQuizQuestion] = useState("");
@@ -48,38 +28,13 @@ export default function EditVideoPlayerDialog({
   const [wrongAnswer2, setWrongAnswer2] = useState("");
   const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
 
-  const [reel, setReel] = useState<Reel>({
-    id: "1",
-    username: "travel_explorer",
-    avatar: "🌎",
-    likes: "12.5K",
-    comments: "234",
-    caption: "Amazing sunset from Bali! 🌅 #travel #sunset",
-    isPlaying: true,
-    isMuted: false,
-    videoUrl:
-      "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-    title: "Bali Sunset",
-    description: "A beautiful sunset captured in Bali.",
+  const [initialData] = useState<VideoData>({
+    title: "Bali Sunset Adventure",
+    description: "A beautiful sunset captured in Bali with stunning views.",
     status: "public",
   });
 
-  const [editForm, setEditForm] = useState({
-    title: reel.title,
-    description: reel.description,
-    status: reel.status,
-  });
-
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  // Initialize form with reel's data
-  useEffect(() => {
-    setEditForm({
-      title: reel.title,
-      description: reel.description,
-      status: reel.status,
-    });
-  }, [reel]);
+  const [editForm, setEditForm] = useState(initialData);
 
   // Animate dialog open/close
   useEffect(() => {
@@ -92,52 +47,9 @@ export default function EditVideoPlayerDialog({
     }
   }, [isOpen]);
 
-  // Initialize video playback
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    video.src = reel.videoUrl;
-    video.muted = reel.isMuted;
-
-    // Auto-play when dialog opens
-    video.play().catch(() => {});
-  }, [reel.videoUrl, reel.isMuted]);
-
-  // Handle play/pause state changes
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (reel.isPlaying) {
-      video.play().catch(() => {});
-    } else {
-      video.pause();
-    }
-  }, [reel.isPlaying]);
-
   // Quiz handlers
-  const handleQuizQuestionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuizQuestion(e.target.value);
-  };
-
-  const handleCorrectAnswerChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setCorrectAnswer(e.target.value);
-  };
-
-  const handleWrongAnswer1Change = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setWrongAnswer1(e.target.value);
-  };
-
-  const handleWrongAnswer2Change = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setWrongAnswer2(e.target.value);
-  };
-
   const submitQuiz = async () => {
     setIsSubmittingQuiz(true);
-    // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 2000));
     console.log("Quiz submitted:", {
       question: quizQuestion,
@@ -146,16 +58,14 @@ export default function EditVideoPlayerDialog({
       wrong2: wrongAnswer2,
     });
     setIsSubmittingQuiz(false);
+
+    // Reset form
+    setQuizQuestion("");
+    setCorrectAnswer("");
+    setWrongAnswer1("");
+    setWrongAnswer2("");
+
     alert("Quiz submitted successfully!");
-  };
-
-  // Action handlers
-  const togglePlayPause = () => {
-    setReel((prev) => ({ ...prev, isPlaying: !prev.isPlaying }));
-  };
-
-  const toggleMute = () => {
-    setReel((prev) => ({ ...prev, isMuted: !prev.isMuted }));
   };
 
   const handleFormChange = (
@@ -168,34 +78,42 @@ export default function EditVideoPlayerDialog({
   };
 
   const handleSave = () => {
-    setReel((prev) => ({ ...prev, ...editForm }));
-    console.log("Saved reel data:", editForm);
+    console.log("Saved video data:", editForm);
     onOpenChange(false);
   };
 
-  const reelActions = {
-    onLike: (reelId: string) => console.log(`Liked reel: ${reelId}`),
-    onComment: (reelId: string) => console.log(`Comment on reel: ${reelId}`),
-    onShare: (reelId: string) => console.log(`Share reel: ${reelId}`),
-    onBookmark: (reelId: string) => console.log(`Bookmark reel: ${reelId}`),
+  const handleCancel = () => {
+    setEditForm(initialData);
+    onOpenChange(false);
   };
 
   if (!shouldRender) return null;
 
   return (
     <div
-      className={`fixed inset-0 z-50 bg-black/80 transition-all duration-300 ${
+      className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-all duration-300 flex items-center justify-center p-4 ${
         isAnimating ? "opacity-100" : "opacity-0"
       }`}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onOpenChange(false);
+      }}
     >
       <div
-        className={`h-full w-full bg-white flex flex-col transition-all duration-300 ${
-          isAnimating ? "scale-100" : "scale-95"
+        className={`bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col transition-all duration-300 ${
+          isAnimating ? "scale-100 translate-y-0" : "scale-95 translate-y-4"
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-white sticky top-0 z-10">
-          <h2 className="text-lg font-semibold text-gray-900">Edit Video</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Edit Video</h2>
+              <p className="text-sm text-gray-500">Update your video details</p>
+            </div>
+          </div>
           <button
             onClick={() => onOpenChange(false)}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -204,388 +122,225 @@ export default function EditVideoPlayerDialog({
           </button>
         </div>
 
-        {/* Mobile Tab Navigation */}
-        <div className="flex border-b bg-white sticky top-16 z-10 md:hidden">
-          <button
-            onClick={() => setActiveTab("video")}
-            className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "video"
-                ? "border-blue-500 text-blue-600 bg-blue-50"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            Video
-          </button>
+        {/* Tab Navigation */}
+        <div className="flex border-b bg-gray-50">
           <button
             onClick={() => setActiveTab("edit")}
-            className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex-1 py-4 px-6 text-sm font-semibold border-b-2 transition-all ${
               activeTab === "edit"
-                ? "border-blue-500 text-blue-600 bg-blue-50"
-                : "border-transparent text-gray-500 hover:text-gray-700"
+                ? "border-blue-500 text-blue-600 bg-white"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100"
             }`}
           >
-            Edit
+            <div className="flex items-center justify-center gap-2">
+              <FileText className="w-4 h-4" />
+              <span>Edit Details</span>
+            </div>
           </button>
           <button
             onClick={() => setActiveTab("quiz")}
-            className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex-1 py-4 px-6 text-sm font-semibold border-b-2 transition-all ${
               activeTab === "quiz"
-                ? "border-blue-500 text-blue-600 bg-blue-50"
-                : "border-transparent text-gray-500 hover:text-gray-700"
+                ? "border-purple-500 text-purple-600 bg-white"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100"
             }`}
           >
-            Quiz
+            <div className="flex items-center justify-center gap-2">
+              <HelpCircle className="w-4 h-4" />
+              <span>Edit Quiz</span>
+            </div>
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-          {/* Video Section */}
-          <div
-            className={`${activeTab === "video" || window.innerWidth >= 768 ? "block" : "hidden"} flex-1 md:w-3/5 flex flex-col`}
-          >
-            {/* Video Container */}
-            <div className="flex-1 relative bg-black">
-              <video
-                ref={videoRef}
-                className="w-full h-full object-cover"
-                playsInline
-                controls={false}
-                loop
-              />
-
-              {/* Video Overlay */}
-              <div className="absolute inset-0 flex flex-col justify-between p-4">
-                {/* Top Bar */}
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-sm">
-                      {reel.avatar}
-                    </div>
-                    <span className="text-white font-medium text-sm drop-shadow-lg">
-                      {reel.username}
-                    </span>
-                  </div>
-                  <button className="text-white/80 hover:text-white p-1">
-                    <MoreHorizontal className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Center Play Button */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <button
-                    onClick={togglePlayPause}
-                    className="bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-full p-4 transition-all transform hover:scale-110"
-                  >
-                    {reel.isPlaying ? (
-                      <Pause className="w-8 h-8 text-white" />
-                    ) : (
-                      <Play className="w-8 h-8 text-white ml-1" />
-                    )}
-                  </button>
-                </div>
-
-                {/* Bottom Content */}
-                <div className="flex justify-between items-end">
-                  <div className="flex-1 mr-4">
-                    <p className="text-white text-sm leading-relaxed line-clamp-3 drop-shadow-lg">
-                      {reel.caption}
-                    </p>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex flex-col space-y-4">
-                    <button
-                      onClick={() => reelActions.onLike(reel.id)}
-                      className="text-white hover:text-red-400 flex flex-col items-center group transition-all"
-                    >
-                      <div className="p-2 rounded-full bg-black/20 group-hover:bg-black/40 transition-colors">
-                        <Heart className="w-6 h-6" />
-                      </div>
-                      <span className="text-xs mt-1 font-medium drop-shadow-lg">
-                        {reel.likes}
-                      </span>
-                    </button>
-
-                    <button
-                      onClick={() => reelActions.onComment(reel.id)}
-                      className="text-white hover:text-blue-400 flex flex-col items-center group transition-all"
-                    >
-                      <div className="p-2 rounded-full bg-black/20 group-hover:bg-black/40 transition-colors">
-                        <MessageCircle className="w-6 h-6" />
-                      </div>
-                      <span className="text-xs mt-1 font-medium drop-shadow-lg">
-                        {reel.comments}
-                      </span>
-                    </button>
-
-                    <button
-                      onClick={toggleMute}
-                      className="text-white hover:text-yellow-400 group transition-all"
-                    >
-                      <div className="p-2 rounded-full bg-black/20 group-hover:bg-black/40 transition-colors">
-                        {reel.isMuted ? (
-                          <VolumeX className="w-5 h-5" />
-                        ) : (
-                          <Volume2 className="w-5 h-5" />
-                        )}
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
-                <div
-                  className="h-full bg-white transition-all duration-1000 ease-linear"
-                  style={{ width: reel.isPlaying ? "100%" : "30%" }}
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* Edit Form */}
+          {activeTab === "edit" && (
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Video Title
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={editForm.title}
+                  onChange={handleFormChange}
+                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  placeholder="Enter video title"
+                  maxLength={100}
                 />
+                <div className="flex justify-between items-center mt-1">
+                  <p className="text-xs text-gray-500">
+                    Give your video a descriptive title
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {editForm.title.length} / 100
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  value={editForm.description}
+                  onChange={handleFormChange}
+                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                  placeholder="Describe your video... What's it about? What makes it special?"
+                  rows={5}
+                  maxLength={500}
+                />
+                <div className="flex justify-between items-center mt-1">
+                  <p className="text-xs text-gray-500">
+                    Help viewers understand what they'll see
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {editForm.description.length} / 500
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Form/Quiz Section */}
-          <div
-            className={`${activeTab === "edit" || activeTab === "quiz" || window.innerWidth >= 768 ? "block" : "hidden"} w-full md:w-2/5 flex flex-col bg-gray-50`}
-          >
-            {/* Desktop Tab Navigation */}
-            <div className="hidden md:flex border-b bg-white">
-              <button
-                onClick={() => setActiveTab("edit")}
-                className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "edit"
-                    ? "border-blue-500 text-blue-600 bg-blue-50"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                Edit Details
-              </button>
-              <button
-                onClick={() => setActiveTab("quiz")}
-                className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "quiz"
-                    ? "border-blue-500 text-blue-600 bg-blue-50"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                Add Quiz
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4">
-              {/* Edit Form */}
-              {activeTab === "edit" && (
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Video Title
-                    </label>
-                    <input
-                      type="text"
-                      name="title"
-                      value={editForm.title}
-                      onChange={handleFormChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                      placeholder="Enter video title"
-                      maxLength={100}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      {editForm.title.length} / 100
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Description
-                    </label>
-                    <textarea
-                      name="description"
-                      value={editForm.description}
-                      onChange={handleFormChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
-                      placeholder="Describe your video..."
-                      rows={4}
-                      maxLength={500}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      {editForm.description.length} / 500
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Privacy Setting
-                    </label>
-                    <select
-                      name="status"
-                      value={editForm.status}
-                      onChange={handleFormChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    >
-                      <option value="public">
-                        🌍 Public - Anyone can view
-                      </option>
-                      <option value="private">
-                        🔒 Private - Only you can view
-                      </option>
-                    </select>
-                  </div>
-
-                  <div className="pt-4 border-t">
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <button
-                        type="button"
-                        onClick={() => onOpenChange(false)}
-                        className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSave}
-                        className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                      >
-                        Save Changes
-                      </button>
-                    </div>
-                  </div>
+          {/* Quiz Section */}
+          {activeTab === "quiz" && (
+            <div className="space-y-6">
+              <div className="space-y-5">
+                {/* Question */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Quiz Question *
+                  </label>
+                  <input
+                    type="text"
+                    value={quizQuestion}
+                    onChange={(e) => setQuizQuestion(e.target.value)}
+                    placeholder="What question do you want to ask about your video?"
+                    disabled={!isVideoUploadComplete}
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    maxLength={200}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {quizQuestion.length} / 200
+                  </p>
                 </div>
-              )}
 
-              {/* Quiz Section */}
-              {activeTab === "quiz" && (
-                <div className="space-y-6">
-                  <div className="text-center">
-                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <AlertCircle className="w-6 h-6 text-purple-600" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      Add Quiz Question
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      Engage your viewers with an interactive quiz
-                    </p>
-                  </div>
+                {/* Answer Options */}
+                <div className="space-y-4">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Answer Options *
+                  </label>
 
-                  <div
-                    className={`space-y-4 ${!isVideoUploadComplete ? "opacity-50 pointer-events-none" : ""}`}
-                  >
-                    {/* Question */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Quiz Question *
-                      </label>
+                  {/* Correct Answer */}
+                  <div className="relative">
+                    <span className="absolute -top-2 left-3 px-2 py-0.5 bg-green-500 text-white text-xs font-medium rounded-full z-10">
+                      Correct Answer
+                    </span>
+                    <div className="flex items-center gap-3 p-3 border-2 border-green-200 rounded-xl bg-green-50/50">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-500 flex-shrink-0">
+                        <Check className="w-4 h-4 text-white" />
+                      </div>
                       <input
                         type="text"
-                        value={quizQuestion}
-                        onChange={handleQuizQuestionChange}
-                        placeholder="What question do you want to ask about your video?"
+                        value={correctAnswer}
+                        onChange={(e) => setCorrectAnswer(e.target.value)}
+                        placeholder="Enter the correct answer..."
                         disabled={!isVideoUploadComplete}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
-                        maxLength={200}
+                        className="flex-1 p-2 border-0 bg-transparent focus:ring-0 focus:outline-none"
+                        maxLength={80}
                       />
-                      <p className="text-xs text-gray-500 mt-1">
-                        {quizQuestion.length} / 200
-                      </p>
-                    </div>
-
-                    {/* Answer Options */}
-                    <div className="space-y-3">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Answer Options *
-                      </label>
-
-                      {/* Correct Answer */}
-                      <div className="relative">
-                        <div className="flex items-center space-x-3">
-                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 flex-shrink-0">
-                            <Check className="w-4 h-4 text-green-600" />
-                          </div>
-                          <input
-                            type="text"
-                            value={correctAnswer}
-                            onChange={handleCorrectAnswerChange}
-                            placeholder="Correct answer..."
-                            disabled={!isVideoUploadComplete}
-                            className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
-                            maxLength={80}
-                          />
-                        </div>
-                        <span className="absolute -top-2 left-10 px-2 py-0.5 bg-green-500 text-white text-xs rounded-full">
-                          Correct
-                        </span>
-                      </div>
-
-                      {/* Wrong Answers */}
-                      <div className="relative">
-                        <div className="flex items-center space-x-3">
-                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-red-100 flex-shrink-0">
-                            <X className="w-4 h-4 text-red-600" />
-                          </div>
-                          <input
-                            type="text"
-                            value={wrongAnswer1}
-                            onChange={handleWrongAnswer1Change}
-                            placeholder="Wrong answer option 1..."
-                            disabled={!isVideoUploadComplete}
-                            className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors"
-                            maxLength={80}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-3">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-red-100 flex-shrink-0">
-                          <X className="w-4 h-4 text-red-600" />
-                        </div>
-                        <input
-                          type="text"
-                          value={wrongAnswer2}
-                          onChange={handleWrongAnswer2Change}
-                          placeholder="Wrong answer option 2..."
-                          disabled={!isVideoUploadComplete}
-                          className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors"
-                          maxLength={80}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Submit Button */}
-                    <div className="pt-4">
-                      <button
-                        onClick={submitQuiz}
-                        disabled={
-                          !isVideoUploadComplete ||
-                          !quizQuestion.trim() ||
-                          !correctAnswer.trim() ||
-                          !wrongAnswer1.trim() ||
-                          !wrongAnswer2.trim() ||
-                          isSubmittingQuiz
-                        }
-                        className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-3 rounded-lg hover:shadow-lg hover:from-purple-700 hover:to-blue-700 transform transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none font-medium"
-                      >
-                        {isSubmittingQuiz ? (
-                          <div className="flex items-center justify-center space-x-2">
-                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                            <span>Submitting...</span>
-                          </div>
-                        ) : (
-                          "Submit Quiz"
-                        )}
-                      </button>
-                      <p className="text-xs text-gray-500 mt-2 text-center">
-                        {!isVideoUploadComplete
-                          ? "Complete video upload to enable quiz submission"
-                          : "Quiz will be saved and can be edited later"}
-                      </p>
                     </div>
                   </div>
+
+                  {/* Wrong Answers */}
+                  <div className="flex items-center gap-3 p-3 border-2 border-gray-200 rounded-xl bg-gray-50/50 hover:border-gray-300 transition-colors">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-red-100 flex-shrink-0">
+                      <X className="w-4 h-4 text-red-600" />
+                    </div>
+                    <input
+                      type="text"
+                      value={wrongAnswer1}
+                      onChange={(e) => setWrongAnswer1(e.target.value)}
+                      placeholder="Wrong answer option 1..."
+                      disabled={!isVideoUploadComplete}
+                      className="flex-1 p-2 border-0 bg-transparent focus:ring-0 focus:outline-none"
+                      maxLength={80}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 border-2 border-gray-200 rounded-xl bg-gray-50/50 hover:border-gray-300 transition-colors">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-red-100 flex-shrink-0">
+                      <X className="w-4 h-4 text-red-600" />
+                    </div>
+                    <input
+                      type="text"
+                      value={wrongAnswer2}
+                      onChange={(e) => setWrongAnswer2(e.target.value)}
+                      placeholder="Wrong answer option 2..."
+                      disabled={!isVideoUploadComplete}
+                      className="flex-1 p-2 border-0 bg-transparent focus:ring-0 focus:outline-none"
+                      maxLength={80}
+                    />
+                  </div>
                 </div>
-              )}
+
+                {/* Submit Button */}
+                <button
+                  onClick={submitQuiz}
+                  disabled={
+                    !isVideoUploadComplete ||
+                    !quizQuestion.trim() ||
+                    !correctAnswer.trim() ||
+                    !wrongAnswer1.trim() ||
+                    !wrongAnswer2.trim() ||
+                    isSubmittingQuiz
+                  }
+                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-4 rounded-xl hover:shadow-lg hover:from-purple-700 hover:to-blue-700 transform transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none font-semibold"
+                >
+                  {isSubmittingQuiz ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                      <span>Submitting Quiz...</span>
+                    </div>
+                  ) : (
+                    "Submit Quiz"
+                  )}
+                </button>
+                <p className="text-xs text-gray-500 text-center">
+                  {!isVideoUploadComplete
+                    ? "Complete video upload to enable quiz submission"
+                    : "Quiz will be saved and can be edited later"}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer (only for Edit tab) */}
+        {activeTab === "edit" && (
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 transition-all font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all font-semibold flex items-center justify-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>Save Changes</span>
+              </button>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

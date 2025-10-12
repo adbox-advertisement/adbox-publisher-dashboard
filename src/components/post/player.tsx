@@ -455,7 +455,7 @@ export const VideoPlayerDialog: React.FC<VideoPlayerDialogProps> = ({
         {/* Close Button */}
         <button
           onClick={() => onOpenChange(false)}
-          className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 bg-black/50 hover:bg-black/70 active:bg-black/80 text-white rounded-full p-2 transition-colors touch-manipulation"
+          className="absolute cursor-pointer top-2 right-2 sm:top-4 sm:right-4 z-10 bg-black/50 hover:bg-black/70 active:bg-black/80 text-white rounded-full p-2 transition-colors touch-manipulation"
         >
           <X className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>

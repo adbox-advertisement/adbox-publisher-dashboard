@@ -21,6 +21,7 @@ import { Storage } from "@/helpers/local.storage";
 import { useSocket } from "@/context/SocketContext";
 import SkeletonDemo from "./VideoSkeletonCard";
 import { useNavigate } from "@tanstack/react-router";
+import { formatDate } from "@/helpers/utilFunctions";
 
 export function Campaign(): JSX.Element {
   const [selectedVideos, setSelectedVideos] = useState<number[]>([]);
@@ -442,8 +443,7 @@ export function Campaign(): JSX.Element {
                           {video.resourceTitle}
                         </h3>
                         <p className="text-xs text-gray-500">
-                          Uploaded{" "}
-                          {new Date(video.updatedAt).toLocaleDateString()}
+                          Uploaded {formatDate(video.updatedAt)}
                         </p>
                       </div>
                     </div>

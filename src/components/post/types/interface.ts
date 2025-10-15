@@ -54,3 +54,15 @@ export const cardColors = [
     hover: "hover:shadow-indigo-200/50",
   },
 ];
+
+export interface UserProfile {
+  id: number;
+  viewer: {
+    fullName: string;
+    image?: string;
+  };
+  name: string;
+
+  avatar?: string;
+  profileImage?: string;
+}

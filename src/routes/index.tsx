@@ -22,7 +22,7 @@ import {
 } from "recharts";
 import { Storage } from "@/helpers/local.storage";
 import ApiService from "@/helpers/api.service";
-import type { Post } from "@/components/post/interface";
+import type { Post } from "@/components/post/types/interface";
 import { toast } from "sonner";
 import { VideoPlayerDialog } from "@/components/post/player";
 import { Link } from "@tanstack/react-router";

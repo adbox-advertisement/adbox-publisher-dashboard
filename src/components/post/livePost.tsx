@@ -19,14 +19,22 @@ import ApiService from "@/helpers/api.service";
 import { Storage } from "@/helpers/local.storage";
 import { toast } from "sonner";
 import { useSocket } from "@/context/SocketContext";
-import { Edit3, Globe, Loader2, Play, Trash2 } from "lucide-react";
+import { Edit3, Globe, Loader2, Play } from "lucide-react";
 import { CampaignChip } from "@/components/post/campaignChip";
 import { formatDate } from "@/helpers/utilFunctions";
-import CampaignSkeletonDemo from "@/components/post/CampaignSkeleton";
-import { cardColors } from "@/components/post/interface";
+import CampaignSkeletonDemo from "@/components/post/loading/CampaignSkeleton";
+import {
+  cardColors,
+  type UserProfile,
+} from "@/components/post/types/interface";
 import { VideoPlayerDialog } from "@/components/post/player";
-import EditVideoPlayerDialog from "@/components/post/edit";
-import DeleteCampaignDialog from "./DeleteCampaignDialog";
+import EditVideoPlayerDialog from "@/components/post/modals/edit";
+import DeleteCampaignDialog from "./modals/DeleteCampaignDialog";
+import { LikesModal } from "./modals/LikesModal";
+import { ViewsModal } from "./modals/ViewsModal";
+import { LikePreview } from "./util/LikePreview";
+import { ViewPreview } from "./util/ViewPreview";
+import EditCampaign from "./modals/EditCampaign";
 
 export function LivePost() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,9 +46,23 @@ export function LivePost() {
   const [updatingPrivacyPostId, setUpdatingPrivacyPostId] = useState<
     number | null
   >(null);
-
   const [activePostMenu, setActivePostMenu] = useState<number | null>(null);
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
+
+  // State for likes modal
+  const [showLikesModal, setShowLikesModal] = useState(false);
+  const [selectedVideoLikes, setSelectedVideoLikes] = useState<UserProfile[]>(
+    []
+  );
+  const [selectedVideoTitle, setSelectedVideoTitle] = useState("");
+
+  // State for views modal
+  const [showViewsModal, setShowViewsModal] = useState(false);
+  const [selectedVideoViews, setSelectedVideoViews] = useState<UserProfile[]>(
+    []
+  );
+  const [campaignEditVideo, setCampaignEditVideo] = useState<any>();
+  const [campaignData, setCampaignData] = useState<any>(null);
 
   const { UploadingEventData, publishedVideo } = useSocket();
 
@@ -75,6 +97,40 @@ export function LivePost() {
       setIsLoading(false);
     }
   }, []);
+
+  // Function to fetch likes for a video
+  const fetchVideoLikes = async (videoId: number, videoTitle: string) => {
+    try {
+      // Replace with your actual API endpoint
+      const response = await ApiService.get_api(
+        `/likes-viewer/resource/${videoId}/likes`
+      );
+
+      setSelectedVideoLikes(response.data);
+      setSelectedVideoTitle(videoTitle);
+      setShowLikesModal(true);
+    } catch (error) {
+      console.error("Failed to fetch likes:", error);
+      toast.error("Failed to load likes");
+    }
+  };
+
+  // Function to fetch views for a video (similar to likes)
+  const fetchVideoViews = async (videoId: number, videoTitle: string) => {
+    try {
+      // Replace with your actual API endpoint for views
+      const response = await ApiService.get_api(
+        `/viewer-views/resource/${videoId}`
+      );
+
+      setSelectedVideoViews(response.data);
+      setSelectedVideoTitle(videoTitle);
+      setShowViewsModal(true);
+    } catch (error) {
+      console.error("Failed to fetch views:", error);
+      toast.error("Failed to load views");
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -140,18 +196,16 @@ export function LivePost() {
   function getRegionCount(campaign: any): number {
     if (!campaign?.resources) return 0;
 
-    // Collect all regions from all resources
     const allRegions = campaign.resources.flatMap(
       (res: any) => res.regions || []
     );
 
-    // Remove duplicates
     const uniqueRegions = [...new Set(allRegions)];
 
     return uniqueRegions.length;
   }
-  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [expandedCampaigns, setExpandedCampaigns] = useState(new Set());
 
   const toggleCampaignVideos = (campaignId: any) => {
@@ -165,6 +219,7 @@ export function LivePost() {
       return newSet;
     });
   };
+
   const formatNumber = (num: number): string => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
     if (num >= 1000) return (num / 1000).toFixed(1) + "K";
@@ -175,7 +230,6 @@ export function LivePost() {
     try {
       setUpdatingPrivacyPostId(postId);
 
-      // Find the post within the resources array
       const currentPost = campaignPosts
         .flatMap((campaign) => campaign.resources)
         .find((post) => post.id === postId);
@@ -191,7 +245,6 @@ export function LivePost() {
         status: newStatus,
       });
 
-      // Update the nested resources array
       setCampaignPosts(
         campaignPosts.map((campaign) => ({
           ...campaign,
@@ -221,6 +274,7 @@ export function LivePost() {
   const getCardColor = (index: number) => {
     return cardColors[index % cardColors.length];
   };
+
   function calculateTotalBudget(
     campaigns: { campaignAmount: number }[]
   ): number {
@@ -236,12 +290,29 @@ export function LivePost() {
     setSelectedPostId(postId);
     setIsDialogOpen(true);
   };
+
   const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-  const handleEditClick = (postId: number): void => {
-    setSelectedPostId(postId);
+  const handleEditClick = (video: any): void => {
     setIsEditDialogOpen(true);
+    setCampaignData(video);
+  };
+
+  const handleDeleteClick = (video: any): void => {
+    console.log("Deleting video:", video);
+    setCampaignEditVideo(video);
+    setIsDeleteOpen(true);
+  };
+
+  const [isEditCampaignOpen, setIsEditCampaignOpen] = useState(false);
+  const [originalEditCampaignData, setOriginalEditCampaignData] =
+    useState<any>(null);
+
+  const handleEditCampaign = (campaign: any): void => {
+    console.log("Editing campaign:", campaign);
+    setIsEditCampaignOpen(true);
+    setOriginalEditCampaignData(campaign);
   };
 
   return (
@@ -259,7 +330,6 @@ export function LivePost() {
               </div>
             </div>
             <p className="text-2xl md:text-3xl font-bold text-purple-900">
-              {/* GHS {totalBudget.toLocaleString()} */}
               GHS {calculateTotalBudget(campaignPosts).toLocaleString()}
             </p>
           </div>
@@ -331,15 +401,6 @@ export function LivePost() {
       </div>
 
       {showUploadingSkeleton && <CampaignSkeletonDemo />}
-
-      {/* {filteredCampaigns.length === 0 && !showUploadingSkeleton && (
-        <div className="text-center py-12">
-          <p className="text-gray-600 text-sm">
-            No posts found matching your criteria.
-          </p>
-        </div>
-      )} */}
-
       {isLoading && !showUploadingSkeleton && <CampaignSkeletonDemo />}
 
       <div className="space-y-4">
@@ -382,15 +443,43 @@ export function LivePost() {
                         </span>
                       </div>
                     </div>
+
                     <div className="flex gap-2 ml-4">
-                      <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                      <button
+                        title={
+                          campaign.resources.status === "public"
+                            ? "Cannot edit public Campaigns"
+                            : "Edit Campaign"
+                        }
+                        onClick={() => handleEditCampaign(campaign)}
+                        disabled={campaign.resources.status === "public"}
+                        className={` p-2 rounded-lg hover:bg-gray-100 transition-colors${
+                          campaign.resources.status === "public"
+                            ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed opacity-60"
+                            : "bg-blue-50 text-blue-700   hover:bg-blue-100 cursor-pointer"
+                        }`}
+                      >
                         <FiEdit className="w-5 h-5 text-gray-600" />
                       </button>
-                      <button className="p-2 rounded-lg hover:bg-red-50 transition-colors">
+                      <button
+                        title={
+                          campaign.resources.status === "public"
+                            ? "Cannot Delete public Campaigns"
+                            : "Edit Campaign"
+                        }
+                        disabled={campaign.resources.status === "public"}
+                        onClick={() => handleDeleteClick(campaign)}
+                        className={`p-2 rounded-lg hover:bg-red-50 transition-colors ${
+                          campaign.resources.status === "public"
+                            ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed opacity-60"
+                            : "bg-blue-50 text-blue-700   hover:bg-blue-100 cursor-pointer"
+                        }`}
+                      >
                         <FiTrash2 className="w-5 h-5 text-red-600" />
                       </button>
                     </div>
                   </div>
+
                   {/* Campaign Details Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     {/* Videos */}
@@ -475,6 +564,7 @@ export function LivePost() {
                       </p>
                     </div>
                   </div>
+
                   {/* Videos List - ACCORDION */}
                   <div className="border-t border-gray-200 pt-4">
                     <button
@@ -483,7 +573,7 @@ export function LivePost() {
                     >
                       <div className="flex items-center gap-2">
                         <FiVideo
-                          className="w-4 h-4 text-purple-700 "
+                          className="w-4 h-4 text-purple-700"
                           style={{
                             animation: "wiggle 0.6s ease-in-out infinite",
                           }}
@@ -500,14 +590,13 @@ export function LivePost() {
                     </button>
 
                     <style>{`
-                           @keyframes wiggle {
-                           0%, 100% { transform: rotate(-8deg); }
-                             50% { transform: rotate(8deg); }
-                                  }
-                       `}</style>
+                      @keyframes wiggle {
+                        0%, 100% { transform: rotate(-8deg); }
+                        50% { transform: rotate(8deg); }
+                      }
+                    `}</style>
 
-                    {/* Expandable Content ------------------------------- */}
-                    {/* Expandable Campaign Videos Section */}
+                    {/* Expandable Content */}
                     <div
                       className={`overflow-hidden transition-all duration-500 ease-in-out ${
                         expandedCampaigns.has(campaign.id)
@@ -585,50 +674,83 @@ export function LivePost() {
                                 </span>
                               </div>
 
-                              {/* Metadata */}
-                              <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600">
+                              {/* Metadata with Previews */}
+                              <div className="space-y-2">
+                                {/* Upload Date */}
                                 {video.createdAt && (
-                                  <span>
-                                    Uploaded:{" "}
-                                    <span className="text-gray-800 font-medium">
-                                      {video.createdAt && (
-                                        <span className="text-gray-800 text-xs sm:text-sm">
-                                          {new Date(
-                                            video.createdAt
-                                          ).toLocaleDateString("en-US", {
-                                            year: "numeric",
-                                            month: "short",
-                                            day: "numeric",
-                                          })}
-                                        </span>
+                                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600">
+                                    <span>
+                                      Uploaded:{" "}
+                                      <span className="text-gray-800 font-medium">
+                                        {new Date(
+                                          video.createdAt
+                                        ).toLocaleDateString("en-US", {
+                                          year: "numeric",
+                                          month: "short",
+                                          day: "numeric",
+                                        })}
+                                      </span>
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Engagement Stats */}
+                                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600">
+                                  <span className="flex items-center gap-1">
+                                    <Eye className="w-3 h-3 text-gray-400" />
+                                    <span className="font-medium">
+                                      {formatNumber(
+                                        video._count.ViewerViewsOnResource
                                       )}
                                     </span>
                                   </span>
+                                  <span className="flex items-center gap-1">
+                                    <MessageCircle className="w-3 h-3 text-gray-400" />
+                                    <span className="font-medium">
+                                      {formatNumber(
+                                        video._count.ViewerCommentsOnResource
+                                      )}
+                                    </span>
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Heart className="w-3 h-3 text-gray-400" />
+                                    <span className="font-medium">
+                                      {formatNumber(
+                                        video._count.ViewerLikesOnResource
+                                      )}
+                                    </span>
+                                  </span>
+                                </div>
+
+                                {/* NEW: View Preview Section */}
+                                {video._count.ViewerViewsOnResource > 0 && (
+                                  <div className="pt-1">
+                                    <ViewPreview
+                                      views={video.ViewerViewsOnResource || []}
+                                      onViewAll={() =>
+                                        fetchVideoViews(
+                                          video.id,
+                                          video.resourceTitle
+                                        )
+                                      }
+                                    />
+                                  </div>
                                 )}
-                                <span className="flex items-center gap-1">
-                                  <Eye className="w-3 h-3 text-gray-400" />
-                                  <span className="font-medium">
-                                    {formatNumber(
-                                      video._count.ViewerViewsOnResource
-                                    )}
-                                  </span>
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Heart className="w-3 h-3 text-gray-400" />
-                                  <span className="font-medium">
-                                    {formatNumber(
-                                      video._count.ViewerLikesOnResource
-                                    )}
-                                  </span>
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <MessageCircle className="w-3 h-3 text-gray-400" />
-                                  <span className="font-medium">
-                                    {formatNumber(
-                                      video._count.ViewerCommentsOnResource
-                                    )}
-                                  </span>
-                                </span>
+
+                                {/* Like Preview Section */}
+                                {video._count.ViewerLikesOnResource > 0 && (
+                                  <div className="pt-1">
+                                    <LikePreview
+                                      likes={video.ViewerLikesOnResource || []}
+                                      onViewAll={() =>
+                                        fetchVideoLikes(
+                                          video.id,
+                                          video.resourceTitle
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                )}
                               </div>
 
                               {/* Action Buttons */}
@@ -661,21 +783,21 @@ export function LivePost() {
                                 </button>
 
                                 <button
-                                  onClick={() => handleEditClick(video.id)}
-                                  className="flex cursor-pointer items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-all"
+                                  onClick={() => handleEditClick(video)}
+                                  disabled={video.status === "public"}
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                    video.status === "public"
+                                      ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed opacity-60"
+                                      : "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 cursor-pointer"
+                                  }`}
+                                  title={
+                                    video.status === "public"
+                                      ? "Cannot edit public videos"
+                                      : "Edit video"
+                                  }
                                 >
                                   <Edit3 className="w-3 h-3" />
                                   <span>Edit</span>
-                                </button>
-
-                                <button
-                                  onClick={() => {
-                                    setIsDeleteOpen(true);
-                                  }}
-                                  className="flex cursor-pointer items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-all"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                  <span>Delete</span>
                                 </button>
                               </div>
                             </div>
@@ -684,15 +806,13 @@ export function LivePost() {
                       </div>
                     </div>
                   </div>
-                  {/* Regions List */}{" "}
+
+                  {/* Regions List */}
                   <div className="border-t border-gray-200 pt-4 mt-4">
-                    {" "}
                     <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                      {" "}
-                      Target Regions{" "}
-                    </h4>{" "}
+                      Target Regions
+                    </h4>
                     <div className="flex flex-wrap gap-2">
-                      {" "}
                       {[
                         ...new Set(
                           campaign.resources?.flatMap(
@@ -704,12 +824,12 @@ export function LivePost() {
                           key={region}
                           className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium border border-blue-200"
                         >
-                          {" "}
-                          {region}{" "}
+                          {region}
                         </span>
-                      ))}{" "}
-                    </div>{" "}
+                      ))}
+                    </div>
                   </div>
+
                   {/* Performance Stats */}
                   {campaign.status !== "scheduled" && (
                     <div className="border-t border-gray-200 pt-4 mt-4">
@@ -762,11 +882,12 @@ export function LivePost() {
             );
           })
         )}
+
         <DeleteCampaignDialog
           isOpen={isDeleteOpen}
+          campaignEditVideo={campaignEditVideo}
           onOpenChange={setIsDeleteOpen}
-          onConfirm={() => console.log("Campaign deleted")}
-          campaignName="Summer Promo 2025"
+          onDeleteSuccess={() => fetchPublisherPosts(false)}
         />
 
         {selectedPostId && (
@@ -780,12 +901,37 @@ export function LivePost() {
             videoDescription="This video walks you through the basics of using our dashboard, managing content, and understanding the key features."
           />
         )}
-        {selectedPostId && (
-          <EditVideoPlayerDialog
-            isOpen={isEditDialogOpen}
-            onOpenChange={setIsEditDialogOpen}
-          />
-        )}
+
+        <EditCampaign
+          isOpen={isEditCampaignOpen}
+          campaignData={originalEditCampaignData}
+          onClose={() => setIsEditCampaignOpen(false)}
+          // onDeleteSuccess={() => fetchPublisherPosts(false)}
+        />
+
+        <EditVideoPlayerDialog
+          isOpen={isEditDialogOpen}
+          campaignData={campaignData}
+          onclose={() => setIsEditDialogOpen(false)}
+          onOpenChange={setIsEditDialogOpen}
+          onDeleteSuccess={() => fetchPublisherPosts(false)}
+        />
+
+        {/* Likes Modal */}
+        <LikesModal
+          isOpen={showLikesModal}
+          onClose={() => setShowLikesModal(false)}
+          likes={selectedVideoLikes}
+          videoTitle={selectedVideoTitle}
+        />
+
+        {/* Views Modal */}
+        <ViewsModal
+          isOpen={showViewsModal}
+          onClose={() => setShowViewsModal(false)}
+          views={selectedVideoViews}
+          videoTitle={selectedVideoTitle}
+        />
       </div>
     </div>
   );

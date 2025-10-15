@@ -47,6 +47,10 @@ export const VideoPlayerDialog: React.FC<VideoPlayerDialogProps> = ({
   const [replyText, setReplyText] = useState<string>("");
   const [showComments, setShowComments] = useState<boolean>(false);
   const [videoLoaded, setVideoLoaded] = useState<boolean>(false);
+  const [videoError, setVideoError] = useState<string | null>(null); // New state for error handling
+  const hlsRef = useRef<Hls | null>(null); // Store HLS instance in ref to prevent re-creation
+  const cleanupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // For debouncing cleanup
 
   // Enhanced comments with more realistic data
   const [comments, setComments] = useState<Comment[]>([
@@ -129,102 +133,152 @@ export const VideoPlayerDialog: React.FC<VideoPlayerDialogProps> = ({
   }, [isOpen]);
 
   // Enhanced video setup effect with better mobile support
+  // Enhanced video setup effect with better mobile support
   useEffect(() => {
     if (!videoRef.current || !shouldRender) return;
 
     const video = videoRef.current;
     setVideoLoaded(false);
+    setVideoError(null);
 
     const isHLSUrl = src.includes(".m3u8");
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    const cleanup = () => {
+      // Defer cleanup to avoid aborting active fetches
+      if (cleanupTimeoutRef.current) {
+        clearTimeout(cleanupTimeoutRef.current);
+      }
+      cleanupTimeoutRef.current = setTimeout(() => {
+        if (hlsRef.current) {
+          hlsRef.current.detachMedia();
+          hlsRef.current.destroy();
+          hlsRef.current = null;
+        }
+        if (video) {
+          video.src = "";
+          video.load();
+        }
+      }, 500); // 500ms delay to allow fetch completion
+    };
+
+    const handleLoadedMetadata = () => {
+      setVideoLoaded(true);
+      setVideoError(null);
+      console.log("Video metadata loaded");
+      if (isMobile) {
+        video.pause(); // Ensure no autoplay on mobile
+      } else {
+        video.play().catch((err) => {
+          console.log("Autoplay blocked:", err.message);
+          setVideoError("Autoplay blocked. Please click to play.");
+        });
+      }
+    };
+
+    const handleError = (e: Event) => {
+      console.error("Video element error:", e);
+      const videoError = video.error;
+      if (videoError) {
+        console.error(
+          "Video error code:",
+          videoError.code,
+          "message:",
+          videoError.message
+        );
+        setVideoError("Failed to load video. Please try again.");
+      } else {
+        setVideoError("An error occurred while loading the video.");
+      }
+      setVideoLoaded(false);
+    };
+    const handleAbort = () => {
+      console.log("Video fetch aborted");
+      setVideoError("Video loading was interrupted. Please try again.");
+      setVideoLoaded(false);
+    };
+
+    video.addEventListener("loadedmetadata", handleLoadedMetadata);
+    video.addEventListener("error", handleError);
+    video.addEventListener("abort", handleAbort); // Handle abort events
 
     if (isHLSUrl) {
-      if (Hls.isSupported()) {
-        const hls = new Hls({
-          enableWorker: false,
-          lowLatencyMode: true,
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        console.log("Using native HLS playback");
+        video.src = src;
+        video.load();
+      }
+      // For other browsers, use HLS.js
+      else if (Hls.isSupported()) {
+        console.log("Using HLS.js playback");
+        hlsRef.current = new Hls({
+          debug: process.env.NODE_ENV === "development",
+          enableWorker: true,
+          lowLatencyMode: false,
           backBufferLength: 90,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 600,
+          maxBufferSize: 60 * 1000 * 1000,
+          maxBufferHole: 0.5,
+          highBufferWatchdogPeriod: 2,
+          nudgeOffset: 0.1,
+          nudgeMaxRetry: 3,
+          maxFragLookUpTolerance: 0.25,
+          liveSyncDurationCount: 3,
+          liveMaxLatencyDurationCount: Infinity,
+          liveDurationInfinity: false,
+          autoStartLoad: true,
+          capLevelToPlayerSize: true,
         });
+        hlsRef.current.loadSource(src);
+        hlsRef.current.attachMedia(video);
 
-        hls.loadSource(src);
-        hls.attachMedia(video);
-
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        hlsRef.current.on(Hls.Events.MANIFEST_PARSED, () => {
+          console.log("HLS manifest parsed successfully");
           setVideoLoaded(true);
-          video
-            .play()
-            .catch((err) =>
-              console.log(
-                "Autoplay blocked, interaction required:",
-                err.message
-              )
-            );
-        });
-
-        hls.on(Hls.Events.ERROR, (__, data) => {
-          console.error("HLS error:", data);
-
-          if (data.fatal) {
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                console.log(
-                  "Fatal network error encountered, trying to recover..."
-                );
-                hls.startLoad();
-                break;
-
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                console.log(
-                  "Fatal media error encountered, trying to recover..."
-                );
-                hls.recoverMediaError();
-                break;
-
-              default:
-                console.log("Unrecoverable error, destroying HLS instance...");
-                hls.destroy();
-                break;
-            }
-          } else {
-            // Non-fatal errors like bufferStalledError
-            if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
-              console.log("Buffer stalled, attempting recovery...");
-              hls.recoverMediaError();
-            }
+          if (!isMobile) {
+            video.play().catch((err) => {
+              console.log("Autoplay blocked:", err.message);
+              setVideoError("Autoplay blocked. Please click to play.");
+            });
           }
         });
 
-        return () => {
-          hls.destroy();
-        };
+        hlsRef.current.on(Hls.Events.ERROR, (event, data) => {
+          console.error("HLS error:", event, data);
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                console.log("Network error, retrying...");
+                hlsRef.current?.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                console.log("Media error, attempting recovery...");
+                hlsRef.current?.recoverMediaError();
+                break;
+              default:
+                console.error("Unrecoverable HLS error");
+                setVideoError("Failed to load video stream. Please try again.");
+                cleanup();
+                break;
+            }
+          }
+        });
       } else {
-        // Native Safari HLS
-        video.src = src;
-        video.load();
-        setVideoLoaded(true);
+        console.error("HLS not supported");
+        setVideoError("HLS playback is not supported on this browser.");
+        setVideoLoaded(false);
       }
     } else {
-      // MP4 or other video
+      console.log("Using standard video playback");
       video.src = src;
       video.load();
-      setVideoLoaded(true);
-      video.addEventListener("loadedmetadata", () => {
-        video
-          .play()
-          .catch((err) =>
-            console.log("Autoplay blocked, interaction required:", err.message)
-          );
-      });
     }
 
-    const handleCanPlay = () => setVideoLoaded(true);
-    const handleLoadedData = () => setVideoLoaded(true);
-
-    video.addEventListener("canplay", handleCanPlay);
-    video.addEventListener("loadeddata", handleLoadedData);
-
     return () => {
-      video.removeEventListener("canplay", handleCanPlay);
-      video.removeEventListener("loadeddata", handleLoadedData);
+      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      video.removeEventListener("error", handleError);
+      cleanup();
     };
   }, [src, shouldRender]);
 
@@ -470,10 +524,10 @@ export const VideoPlayerDialog: React.FC<VideoPlayerDialogProps> = ({
             <video
               ref={videoRef}
               controls
-              playsInline // Critical for iOS inline playback
-              webkit-playsinline="true" // Legacy iOS support
-              muted={false} // Allow sound on mobile
-              preload="metadata" // Better mobile performance
+              playsInline
+              webkit-playsinline="true"
+              muted // Muted for initial load to bypass autoplay restrictions
+              preload="metadata"
               className="w-full h-full object-contain"
               onLoadStart={() => console.log("Video load started")}
               onCanPlay={() => console.log("Video can play")}
@@ -481,9 +535,13 @@ export const VideoPlayerDialog: React.FC<VideoPlayerDialogProps> = ({
                 console.error("Video error:", e)
               }
             />
-
-            {/* Loading indicator */}
-            {!videoLoaded && (
+            {videoLoaded ? (
+              videoError && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-sm p-4 text-center">
+                  {videoError}
+                </div>
+              )
+            ) : (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
               </div>

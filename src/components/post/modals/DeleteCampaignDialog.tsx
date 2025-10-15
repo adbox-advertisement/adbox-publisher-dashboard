@@ -1,21 +1,26 @@
 import { useEffect, useState } from "react";
-import { X, Trash2, AlertTriangle } from "lucide-react";
+import ApiService from "@/helpers/api.service";
+import { X, Trash2, AlertTriangle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { Storage } from "@/helpers/local.storage";
 
 interface DeleteCampaignDialogProps {
   isOpen: boolean;
+  campaignEditVideo: any;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
-  campaignName?: string;
+  onDeleteSuccess?: () => void;
 }
 
 export default function DeleteCampaignDialog({
   isOpen,
   onOpenChange,
-  onConfirm,
-  campaignName,
+  campaignEditVideo,
+  onDeleteSuccess,
 }: DeleteCampaignDialogProps) {
   const [shouldRender, setShouldRender] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { id } = Storage.getPublisherId("publisherId") || {};
 
   useEffect(() => {
     if (isOpen) {
@@ -28,6 +33,40 @@ export default function DeleteCampaignDialog({
   }, [isOpen]);
 
   if (!shouldRender) return null;
+
+  const handleDeletePost = async () => {
+    if (!campaignEditVideo?.id) {
+      toast.error("Invalid campaign data");
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      await ApiService.delete_api(
+        `/campaign-wallet/${id}/campaign/${campaignEditVideo.id}/delete`
+      );
+
+      toast.success(
+        `"${campaignEditVideo.name || "Video"}" deleted successfully`
+      );
+
+      // Call the success callback to refresh the data
+      if (onDeleteSuccess) {
+        onDeleteSuccess();
+      }
+
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error("Delete failed:", error);
+      toast.error(
+        error?.response?.data?.message ||
+          "Failed to delete video. Please try again."
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div
@@ -72,9 +111,11 @@ export default function DeleteCampaignDialog({
             <AlertTriangle className="w-8 h-8 text-red-500" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900">
-            Are you sure you want to delete{" "}
+            Are you sure you want to delete video with title{" "}
             <span className="text-red-600">
-              {campaignName ? `"${campaignName}"` : "this campaign"}
+              {campaignEditVideo.name
+                ? `"${campaignEditVideo.name}"`
+                : "this campaign"}
             </span>
             ?
           </h3>
@@ -89,20 +130,36 @@ export default function DeleteCampaignDialog({
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="cursor-pointer flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 transition-all font-semibold"
+            disabled={isDeleting}
+            className={`flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl transition-all font-semibold ${
+              isDeleting
+                ? "opacity-50 cursor-not-allowed"
+                : "cursor-pointer hover:bg-gray-100"
+            }`}
           >
             Cancel
           </button>
           <button
             type="button"
-            onClick={() => {
-              onConfirm();
-              onOpenChange(false);
-            }}
-            className="cursor-pointer flex-1 px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-xl hover:shadow-lg hover:from-red-700 hover:to-orange-700 transition-all font-semibold flex items-center justify-center gap-2"
+            onClick={handleDeletePost}
+            disabled={isDeleting}
+            className={`flex-1 px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-xl transition-all font-semibold flex items-center justify-center gap-2 ${
+              isDeleting
+                ? "opacity-75 cursor-not-allowed"
+                : "cursor-pointer hover:shadow-lg hover:from-red-700 hover:to-orange-700"
+            }`}
           >
-            <Trash2 className="w-4 h-4" />
-            <span>Delete</span>
+            {isDeleting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Deleting...</span>
+              </>
+            ) : (
+              <>
+                <Trash2 className="w-4 h-4" />
+                <span>Delete</span>
+              </>
+            )}
           </button>
         </div>
       </div>

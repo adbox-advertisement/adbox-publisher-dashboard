@@ -68,7 +68,7 @@ export const Route = createRootRoute({
       <>
         <Toaster position="bottom-right" richColors />
 
-        <div className="flex min-h-[100vh] max-w-[2000px] mx-auto">
+        <div className="flex min-h-screen max-w-[2000px] mx-auto">
           {/* Mobile Menu Overlay */}
           {isMobileMenuOpen && (
             <div
@@ -77,10 +77,10 @@ export const Route = createRootRoute({
             />
           )}
 
-          {/* Sidebar */}
+          {/* Sidebar - Sticky on Desktop */}
           <div
             className={`
-              fixed md:relative top-0 left-0 h-full z-30
+              fixed md:sticky top-0 left-0 h-screen z-30
               flex flex-col min-w-[250px] w-[250px] 
               bg-white border-gray-200 border-r-[1px]
               transform transition-transform duration-300 ease-in-out
@@ -88,8 +88,8 @@ export const Route = createRootRoute({
               md:translate-x-0
             `}
           >
-            {/* Header */}
-            <section className="border-b-[1px] border-gray-200 h-[70px] text-center flex justify-center items-center text-[20px] md:text-[28px] relative">
+            {/* Header - Sticky within Sidebar */}
+            <section className="sticky top-0 z-10 bg-white border-b-[1px] border-gray-200 h-[70px] text-center flex justify-center items-center text-[20px] md:text-[28px] ">
               <span className="truncate px-4 font-bold">Adbox studio</span>
               <button
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 md:hidden p-2"
@@ -100,8 +100,8 @@ export const Route = createRootRoute({
               </button>
             </section>
 
-            {/* Navigation */}
-            <section className="mt-3 flex flex-col px-[10px] gap-6 md:gap-10 text-[16px] md:text-[18px] overflow-y-auto">
+            {/* Navigation - Scrollable */}
+            <section className="flex-1 mt-3 flex flex-col px-[10px] gap-6 md:gap-10 text-[16px] md:text-[18px] overflow-y-auto">
               <div className="mt-0.5 rounded-lg">
                 <Link
                   to="/upload"
@@ -114,8 +114,8 @@ export const Route = createRootRoute({
               </div>
 
               {/* Manage Section */}
-              <main className="flex flex-col gap-2">
-                <div className="text-[16px] md:text-[18px] font-medium text-gray-700">
+              <main className="flex flex-col gap-2 pb-4">
+                <div className="sticky top-0 bg-white z-[5] py-2 text-[16px] md:text-[18px] font-medium text-gray-700">
                   Manage
                 </div>
                 <Link
@@ -238,8 +238,8 @@ export const Route = createRootRoute({
 
           {/* Main Content */}
           <div className="flex-grow flex flex-col min-w-0">
-            {/* Top Navigation Bar */}
-            <div className="sticky top-0 z-10 bg-white">
+            {/* Top Navigation Bar - Sticky */}
+            <div className="sticky top-0 z-10 bg-white shadow-sm">
               <nav className="h-[70px] border-gray-200 border-b-[1px] flex items-center px-4">
                 {/* Mobile hamburger menu */}
                 <button
@@ -255,7 +255,7 @@ export const Route = createRootRoute({
 
                 {/* Right side */}
                 <div className="ml-auto flex items-center gap-4">
-                  {/* 🔹 Connection Indicator */}
+                  {/* Connection Indicator */}
                   <div
                     className={`w-3 h-3 rounded-full ${
                       connection === ConnectionEnum.connected

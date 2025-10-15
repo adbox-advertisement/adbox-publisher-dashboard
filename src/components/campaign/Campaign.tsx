@@ -24,7 +24,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { formatDate } from "@/helpers/utilFunctions";
 
 export function Campaign(): JSX.Element {
-  const [selectedVideos, setSelectedVideos] = useState<number[]>([]);
+  const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null); // Changed to single video ID
   const [campaignName, setCampaignName] = useState<string>("");
   const [duration, setDuration] = useState<number>(1);
   const [budget, setBudget] = useState<string>("");
@@ -42,6 +42,7 @@ export function Campaign(): JSX.Element {
   const { id } = Storage.getPublisherId("publisherId") || {};
   const [isLaunching, setIsLaunching] = useState(false);
   const [walletId, setWalletId] = useState<string>("");
+
   const formatCurrency = (amount: number): string => `GHS ${amount.toFixed(2)}`;
   const { UploadingEventData, publishedVideo } = useSocket();
   const [showUploadingSkeleton, setShowUploadingSkeleton] =
@@ -54,12 +55,21 @@ export function Campaign(): JSX.Element {
     return num.toString();
   };
 
+  // Changed to handle single video selection
+  const selectVideo = (videoId: number): void => {
+    setSelectedVideoId(videoId);
+  };
+
+  const deselectVideo = (): void => {
+    setSelectedVideoId(null);
+  };
+
   const toggleVideoSelection = (videoId: number): void => {
-    setSelectedVideos((prev) =>
-      prev.includes(videoId)
-        ? prev.filter((id) => id !== videoId)
-        : [...prev, videoId]
-    );
+    if (selectedVideoId === videoId) {
+      deselectVideo();
+    } else {
+      selectVideo(videoId);
+    }
   };
 
   const toggleRegionSelection = (region: string): void => {
@@ -86,13 +96,14 @@ export function Campaign(): JSX.Element {
     video.resourceTitle.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Updated validation for single video
   const canProceedToStep2 = (): boolean => {
-    return selectedVideos.length > 0 && campaignName.trim() !== "";
+    return selectedVideoId !== null && campaignName.trim() !== "";
   };
 
   const canLaunchCampaign = (): boolean => {
     return (
-      selectedVideos.length > 0 &&
+      selectedVideoId !== null &&
       campaignName.trim() !== "" &&
       duration >= 1 &&
       parseFloat(budget) > 0 &&
@@ -102,9 +113,9 @@ export function Campaign(): JSX.Element {
   };
 
   const launchCampaign = async (): Promise<void> => {
-    // ✅ Basic validation
-    if (!selectedVideos.length) {
-      toast.error("Please select at least one video.");
+    // Updated validation for single video
+    if (selectedVideoId === null) {
+      toast.error("Please select one video.");
       return;
     }
     if (!campaignName.trim()) {
@@ -126,7 +137,7 @@ export function Campaign(): JSX.Element {
         duration: duration,
         publisherWalletId: walletId,
         regions: selectedRegions,
-        resourceIds: selectedVideos.map((v) => v.toString()),
+        resourceIds: [selectedVideoId.toString()], // Single video ID
         isCampaign: true,
       };
 
@@ -136,13 +147,11 @@ export function Campaign(): JSX.Element {
       );
 
       console.log("results", results);
-      // ✅ Handle success
       toast.success("🎯 Campaign launched successfully!");
-      // console.log("Campaign API Response:", response);
       navigate({ to: "/posts" });
 
-      // ✅ Reset form and states
-      setSelectedVideos([]);
+      // Reset form and states
+      setSelectedVideoId(null);
       setCampaignName("");
       setBudget("");
       setDuration(1);
@@ -153,59 +162,64 @@ export function Campaign(): JSX.Element {
       console.error("Failed to launch campaign:", error);
       toast.error("❌ Failed to launch campaign. Please try again.");
     } finally {
-      // Optional: clear loading state
       setIsLaunching(false);
     }
   };
 
-  const selectedVideoObjects = posts.filter((v) =>
-    selectedVideos.includes(v.id)
-  );
+  // Get single selected video object
+  const selectedVideoObject =
+    posts.find((v) => v.id === selectedVideoId) || null;
 
-  const fetchPublisherPosts = useCallback(async (isInitialLoad = false) => {
-    try {
-      if (isInitialLoad) {
-        setIsLoading(true);
-      } else {
-        setIsRefreshing(true);
+  const fetchPublisherPosts = useCallback(
+    async (isInitialLoad = false) => {
+      try {
+        if (isInitialLoad) {
+          setIsLoading(true);
+        } else {
+          setIsRefreshing(true);
+        }
+        const response = await ApiService.get_api(
+          `/resources/publisher/${id}?isCampaign=${false}`
+        );
+        setPosts(response.data);
+        toast.info("Campaign these Posts!!!");
+      } catch (error) {
+        console.error("Upload failed:", error);
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
       }
-      const response = await ApiService.get_api(
-        `/resources/publisher/${id}?isCampaign=${false}`
-      );
-      setPosts(response.data);
-      toast.info("Campaign these Posts!!!");
-    } catch (error) {
-      console.error("Upload failed:", error);
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, []);
+    },
+    [id]
+  );
 
   useEffect(() => {
     fetchPublisherPosts(true);
   }, [fetchPublisherPosts]);
 
-  const fetchPublisherWallet = useCallback(async (isInitialLoad = false) => {
-    try {
-      if (isInitialLoad) {
-        setIsLoading(true);
-      } else {
-        setIsRefreshing(true);
+  const fetchPublisherWallet = useCallback(
+    async (isInitialLoad = false) => {
+      try {
+        if (isInitialLoad) {
+          setIsLoading(true);
+        } else {
+          setIsRefreshing(true);
+        }
+        const response = await ApiService.get_api(
+          `/publisher-wallet/publisher/${id}/wallet`
+        );
+        setWalletBalance(response.data.tokenAmount);
+        setWalletId(response.data.id);
+        toast.info("fetched Account Balance!!");
+      } catch (error) {
+        console.error("Upload failed:", error);
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
       }
-      const response = await ApiService.get_api(
-        `/publisher-wallet/publisher/${id}/wallet`
-      );
-      setWalletBalance(response.data.tokenAmount);
-      setWalletId(response.data.id);
-      toast.info("fetched Account Balance!!");
-    } catch (error) {
-      console.error("Upload failed:", error);
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, []);
+    },
+    [id]
+  );
 
   useEffect(() => {
     fetchPublisherWallet(true);
@@ -246,7 +260,7 @@ export function Campaign(): JSX.Element {
                   Create New Campaign
                 </h1>
                 <p className="text-xs text-gray-600 hidden sm:block">
-                  Select videos and configure your campaign
+                  Select one video and configure your campaign
                 </p>
               </div>
             </div>
@@ -276,7 +290,7 @@ export function Campaign(): JSX.Element {
         </div>
 
         {/* Info Banner */}
-        {selectedVideos.length === 0 && (
+        {selectedVideoId === null && (
           <div className="bg-gradient-to-r from-purple-100 to-blue-100 border-b px-4 py-4">
             <div className="flex items-start space-x-3">
               <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
@@ -284,12 +298,11 @@ export function Campaign(): JSX.Element {
               </div>
               <div>
                 <p className="text-sm font-semibold text-purple-900">
-                  Get started by selecting your videos
+                  Get started by selecting one video
                 </p>
                 <p className="text-xs text-purple-700 mt-1">
-                  Choose one or more videos from your library to include in this
-                  campaign. You can select multiple videos to rotate during the
-                  campaign period.
+                  Choose a single video from your library to feature in this
+                  campaign.
                 </p>
               </div>
             </div>
@@ -297,7 +310,7 @@ export function Campaign(): JSX.Element {
         )}
 
         {/* Selection Summary */}
-        {selectedVideos.length > 0 && (
+        {selectedVideoId !== null && (
           <div className="bg-gradient-to-r from-purple-100 to-blue-100 border-b px-4 py-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center space-x-3">
@@ -306,8 +319,7 @@ export function Campaign(): JSX.Element {
                 </div>
                 <div>
                   <span className="text-sm font-semibold text-purple-900 block">
-                    {selectedVideos.length} video
-                    {selectedVideos.length > 1 ? "s" : ""} selected
+                    1 video selected
                   </span>
                   <span className="text-xs text-purple-700">
                     Ready to configure campaign
@@ -377,7 +389,7 @@ export function Campaign(): JSX.Element {
                     <div
                       key={video.id}
                       className={`group bg-white rounded-xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:-translate-y-1 cursor-pointer ${
-                        selectedVideos.includes(video.id)
+                        selectedVideoId === video.id
                           ? "ring-2 ring-purple-500 shadow-xl scale-[1.02]"
                           : ""
                       }`}
@@ -422,7 +434,7 @@ export function Campaign(): JSX.Element {
                               }}
                               className="relative"
                             >
-                              {selectedVideos.includes(video.id) ? (
+                              {selectedVideoId === video.id ? (
                                 <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center shadow-lg">
                                   <CheckCircle className="w-5 h-5 text-white" />
                                 </div>
@@ -514,12 +526,12 @@ export function Campaign(): JSX.Element {
                     setShowVideoDialog(false);
                   }}
                   className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
-                    selectedVideos.includes(selectedVideoForDialog.id)
+                    selectedVideoId === selectedVideoForDialog.id
                       ? "bg-red-100 text-red-700 hover:bg-red-200"
                       : "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
                   }`}
                 >
-                  {selectedVideos.includes(selectedVideoForDialog.id)
+                  {selectedVideoId === selectedVideoForDialog.id
                     ? "Remove from Campaign"
                     : "Add to Campaign"}
                 </button>
@@ -566,34 +578,30 @@ export function Campaign(): JSX.Element {
               {/* Step 1: Basic Info */}
               {currentStep === 1 && (
                 <>
-                  {/* Selected Videos Summary */}
+                  {/* Selected Video Summary */}
                   <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 border border-purple-200">
                     <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                       <CheckCircle className="w-5 h-5 text-purple-600" />
-                      Selected Videos ({selectedVideos.length})
+                      Selected Video
                     </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {selectedVideoObjects.map((video) => (
-                        <div
-                          key={video.id}
-                          className="flex items-center gap-2 bg-white rounded-lg p-2"
-                        >
-                          <img
-                            src={video.imgResource.imageUrl}
-                            alt={video.resourceTitle}
-                            className="w-16 h-9 object-cover rounded"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-gray-900 truncate">
-                              {video.resourceTitle}
-                            </p>
-                            <p className="text-xs text-gray-600">
-                              {video.duration}
-                            </p>
-                          </div>
+                    {selectedVideoObject && (
+                      <div className="flex items-center gap-3 bg-white rounded-lg p-3">
+                        <img
+                          src={selectedVideoObject.imgResource.imageUrl}
+                          alt={selectedVideoObject.resourceTitle}
+                          className="w-20 h-12 object-cover rounded"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {selectedVideoObject.resourceTitle}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {selectedVideoObject.videoResource?.VideoLength ||
+                              "N/A"}
+                          </p>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Campaign Name */}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FiSearch,
   FiDownload,
@@ -206,7 +206,46 @@ export function LivePost() {
   }
 
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
-  const [expandedCampaigns, setExpandedCampaigns] = useState(new Set());
+  const [expandedCampaigns, setExpandedCampaigns] = useState<Set<number>>(
+    new Set()
+  );
+  const prevCampaignIdsRef = useRef<Set<number>>(new Set());
+
+  // Expand all campaigns by default when they load
+  useEffect(() => {
+    if (campaignPosts.length > 0) {
+      const allCampaignIds = new Set(
+        campaignPosts.map((campaign) => campaign.id)
+      );
+      setExpandedCampaigns(allCampaignIds);
+    }
+  }, [campaignPosts.length]);
+
+  useEffect(() => {
+    const currentIds = new Set(campaignPosts.map((campaign) => campaign.id));
+
+    setExpandedCampaigns((prev) => {
+      const newSet = new Set(prev);
+
+      // Add new campaign IDs (expand new ones by default)
+      for (const id of currentIds) {
+        if (!prevCampaignIdsRef.current.has(id)) {
+          newSet.add(id);
+        }
+      }
+
+      // Remove IDs that no longer exist
+      for (const id of prev) {
+        if (!currentIds.has(id)) {
+          newSet.delete(id);
+        }
+      }
+
+      return newSet;
+    });
+
+    prevCampaignIdsRef.current = currentIds;
+  }, [campaignPosts]);
 
   const toggleCampaignVideos = (campaignId: any) => {
     setExpandedCampaigns((prev) => {

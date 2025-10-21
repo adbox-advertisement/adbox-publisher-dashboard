@@ -1,43 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 import {
-  FiSearch,
-  FiDownload,
-  FiEye,
-  FiEdit,
-  FiTrash2,
-  FiVideo,
-  FiMapPin,
-  FiClock,
-  FiDollarSign,
-  FiCalendar,
-  FiPlay,
-} from "react-icons/fi";
+  DollarSign,
+  TrendingUp,
+  Users,
+  Target,
+  Video,
+  MapPin,
+  Clock,
+  Calendar,
+  Eye,
+  Edit2,
+  Play,
+} from "lucide-react";
 
 export const Route = createFileRoute("/campaignHistory/campaignHistory")({
-  component: RouteComponent,
+  component: CampaignHistory,
 });
 
-// const ghanaRegions = [
-//   "Greater Accra",
-//   "Ashanti",
-//   "Western",
-//   "Central",
-//   "Eastern",
-//   "Volta",
-//   "Northern",
-//   "Upper East",
-//   "Upper West",
-//   "Bono",
-//   "Bono East",
-//   "Ahafo",
-//   "Savannah",
-//   "North East",
-//   "Oti",
-//   "Western North",
-// ];
-
-// Mock data - replace with actual API calls
+// Mock data
 const mockCampaigns = [
   {
     id: "1",
@@ -107,388 +87,299 @@ const mockCampaigns = [
   },
 ];
 
-function RouteComponent() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-
-  // Filter campaigns
-  const filteredCampaigns = mockCampaigns.filter((campaign) => {
-    const matchesSearch = campaign.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" || campaign.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  // Calculate summary stats
+export default function CampaignHistory() {
   const totalBudget = mockCampaigns.reduce((sum, c) => sum + c.budget, 0);
   const totalSpent = mockCampaigns.reduce((sum, c) => sum + c.spent, 0);
-  const activeCampaigns = mockCampaigns.filter(
-    (c) => c.status === "active"
-  ).length;
+  const totalImpressions = mockCampaigns.reduce(
+    (sum, c) => sum + c.impressions,
+    0
+  );
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-green-100 text-green-700 border-green-200";
-      case "completed":
-        return "bg-blue-100 text-blue-700 border-blue-200";
-      case "scheduled":
-        return "bg-purple-100 text-purple-700 border-purple-200";
-      case "paused":
-        return "bg-yellow-100 text-yellow-700 border-yellow-200";
-      default:
-        return "bg-gray-100 text-gray-700 border-gray-200";
-    }
-  };
+  const getStatusConfig = () => ({
+    bg: "bg-blue-500",
+    text: "text-blue-700",
+    bgLight: "bg-blue-50",
+    border: "border-blue-200",
+    icon: Target,
+    label: "Completed",
+  });
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
-      year: "numeric",
     });
   };
 
-  const calculateProgress = (spent: number, budget: number) => {
-    return Math.min((spent / budget) * 100, 100);
-  };
+  const calculateProgress = (spent: number, budget: number) =>
+    Math.min((spent / budget) * 100, 100);
 
   return (
-    <div className="max-w-7xl mx-auto pb-8">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-          Campaign History
-        </h1>
-        <p className="text-gray-600 text-sm md:text-base">
-          View and manage all your advertising campaigns
-        </p>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-purple-700 text-sm font-medium">
-              Total Budget
-            </span>
-            <div className="bg-purple-200 rounded-full p-2">
-              <FiDollarSign className="w-4 h-4 text-purple-700" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-blue-50/30 p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
+          {/* Total Budget */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-purple-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="bg-purple-100 rounded-xl p-2">
+                <DollarSign className="w-5 h-5 text-purple-600" />
+              </div>
+              <span className="text-xs font-medium text-gray-600">
+                Total Budget
+              </span>
             </div>
+            <p className="text-2xl font-bold text-gray-900">
+              {totalBudget.toLocaleString()}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">GHS</p>
           </div>
-          <p className="text-2xl md:text-3xl font-bold text-purple-900">
-            GHS {totalBudget.toLocaleString()}
-          </p>
-        </div>
 
-        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-green-700 text-sm font-medium">
-              Total Spent
-            </span>
-            <div className="bg-green-200 rounded-full p-2">
-              <FiDollarSign className="w-4 h-4 text-green-700" />
+          {/* Total Spent */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-emerald-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="bg-emerald-100 rounded-xl p-2">
+                <TrendingUp className="w-5 h-5 text-emerald-600" />
+              </div>
+              <span className="text-xs font-medium text-gray-600">Spent</span>
             </div>
-          </div>
-          <p className="text-2xl md:text-3xl font-bold text-green-900">
-            GHS {totalSpent.toLocaleString()}
-          </p>
-        </div>
-
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-blue-700 text-sm font-medium">
-              Active Campaigns
-            </span>
-            <div className="bg-blue-200 rounded-full p-2">
-              <FiPlay className="w-4 h-4 text-blue-700" />
-            </div>
-          </div>
-          <p className="text-2xl md:text-3xl font-bold text-blue-900">
-            {activeCampaigns}
-          </p>
-        </div>
-      </div>
-
-      {/* Filters and Search */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="flex-1 relative">
-            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search campaigns..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
-          </div>
-          <div className="flex gap-2">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="paused">Paused</option>
-            </select>
-            <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
-              <FiDownload className="w-4 h-4" />
-              <span className="hidden sm:inline">Export</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Campaigns List */}
-      <div className="space-y-4">
-        {filteredCampaigns.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-            <div className="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-              <FiVideo className="w-8 h-8 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No campaigns found
-            </h3>
-            <p className="text-gray-600">
-              Try adjusting your search or filters
+            <p className="text-2xl font-bold text-gray-900">
+              {totalSpent.toLocaleString()}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {((totalSpent / totalBudget) * 100).toFixed(0)}% of budget
             </p>
           </div>
-        ) : (
-          filteredCampaigns.map((campaign) => (
-            <div
-              key={campaign.id}
-              className="bg-white rounded-xl border border-gray-200 hover:shadow-lg transition-shadow duration-200"
-            >
-              {/* Campaign Header */}
-              <div className="p-4 md:p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-lg md:text-xl font-bold text-gray-900 truncate">
+
+          {/* Impressions */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-blue-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="bg-blue-100 rounded-xl p-2">
+                <Users className="w-5 h-5 text-blue-600" />
+              </div>
+              <span className="text-xs font-medium text-gray-600">
+                Impressions
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">
+              {(totalImpressions / 1000).toFixed(1)}K
+            </p>
+            <p className="text-xs text-gray-500 mt-1">Total reach</p>
+          </div>
+
+          {/* Total Campaigns */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-indigo-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="bg-indigo-100 rounded-xl p-2">
+                <Target className="w-5 h-5 text-indigo-600" />
+              </div>
+              <span className="text-xs font-medium text-gray-600">
+                Total Campaigns
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">
+              {mockCampaigns.length}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">All completed</p>
+          </div>
+        </div>
+
+        {/* Campaigns Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+          {mockCampaigns.map((campaign) => {
+            const statusConfig = getStatusConfig();
+            const StatusIcon = statusConfig.icon;
+            const ctr =
+              campaign.impressions > 0
+                ? (campaign.clicks / campaign.impressions) * 100
+                : 0;
+
+            return (
+              <div
+                key={campaign.id}
+                className="bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 overflow-hidden"
+              >
+                {/* Header */}
+                <div className="p-5 bg-gradient-to-br from-gray-50 to-white border-b border-gray-100">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1">
                         {campaign.name}
                       </h3>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
-                          campaign.status
-                        )}`}
-                      >
-                        {campaign.status.charAt(0).toUpperCase() +
-                          campaign.status.slice(1)}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
-                      <span className="flex items-center gap-1">
-                        <FiCalendar className="w-4 h-4" />
-                        {formatDate(campaign.startDate)} -{" "}
-                        {formatDate(campaign.endDate)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 ml-4">
-                    <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
-                      <FiEye className="w-5 h-5 text-gray-600" />
-                    </button>
-                    <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
-                      <FiEdit className="w-5 h-5 text-gray-600" />
-                    </button>
-                    <button className="p-2 rounded-lg hover:bg-red-50 transition-colors">
-                      <FiTrash2 className="w-5 h-5 text-red-600" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Campaign Details Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                  {/* Videos */}
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <FiVideo className="w-4 h-4 text-gray-600" />
-                      <span className="text-xs font-medium text-gray-600">
-                        Videos
-                      </span>
-                    </div>
-                    <p className="text-lg font-bold text-gray-900">
-                      {campaign.videos.length} video
-                      {campaign.videos.length !== 1 ? "s" : ""}
-                    </p>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Total: {campaign.totalDuration}s
-                    </p>
-                  </div>
-
-                  {/* Budget */}
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <FiDollarSign className="w-4 h-4 text-gray-600" />
-                      <span className="text-xs font-medium text-gray-600">
-                        Budget
-                      </span>
-                    </div>
-                    <p className="text-lg font-bold text-gray-900">
-                      GHS {campaign.budget.toLocaleString()}
-                    </p>
-                    <div className="mt-2">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="flex items-center gap-2">
                         <div
-                          className="bg-gradient-to-r from-[#764ba2] to-[#667eea] h-2 rounded-full transition-all duration-300"
-                          style={{
-                            width: `${calculateProgress(campaign.spent, campaign.budget)}%`,
-                          }}
-                        />
+                          className={`flex items-center gap-1.5 px-3 py-1 rounded-full ${statusConfig.bgLight} border ${statusConfig.border}`}
+                        >
+                          <StatusIcon
+                            className={`w-3.5 h-3.5 ${statusConfig.text}`}
+                          />
+                          <span
+                            className={`text-xs font-semibold ${statusConfig.text}`}
+                          >
+                            {statusConfig.label}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {formatDate(campaign.startDate)} -{" "}
+                          {formatDate(campaign.endDate)}
+                        </span>
                       </div>
-                      <p className="text-xs text-gray-600 mt-1">
-                        {calculateProgress(
-                          campaign.spent,
-                          campaign.budget
-                        ).toFixed(0)}
-                        % spent
+                    </div>
+                    <div className="flex gap-1 ml-2">
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <Eye className="w-4 h-4 text-gray-600" />
+                      </button>
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <Edit2 className="w-4 h-4 text-gray-600" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Quick Stats */}
+                  <div className="grid grid-cols-3 gap-2 mt-3">
+                    <div className="bg-white rounded-lg p-2 border border-gray-100">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Video className="w-3.5 h-3.5 text-purple-600" />
+                        <span className="text-xs text-gray-600">Videos</span>
+                      </div>
+                      <p className="text-sm font-bold text-gray-900">
+                        {campaign.videos.length}
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-lg p-2 border border-gray-100">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                        <span className="text-xs text-gray-600">Regions</span>
+                      </div>
+                      <p className="text-sm font-bold text-gray-900">
+                        {campaign.regions.length}
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-lg p-2 border border-gray-100">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-xs text-gray-600">Duration</span>
+                      </div>
+                      <p className="text-sm font-bold text-gray-900">
+                        {campaign.totalDuration}s
                       </p>
                     </div>
                   </div>
+                </div>
 
-                  {/* Duration */}
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <FiClock className="w-4 h-4 text-gray-600" />
-                      <span className="text-xs font-medium text-gray-600">
-                        Duration
-                      </span>
+                {/* Budget Progress */}
+                <div className="p-5 bg-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-gray-700">
+                      Budget Progress
+                    </span>
+                    <span className="text-sm font-bold text-gray-900">
+                      GHS {campaign.spent.toLocaleString()} /{" "}
+                      {campaign.budget.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                    <div
+                      className="bg-gradient-to-r from-purple-500 to-blue-500 h-2.5 rounded-full"
+                      style={{
+                        width: `${calculateProgress(
+                          campaign.spent,
+                          campaign.budget
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    {calculateProgress(campaign.spent, campaign.budget).toFixed(
+                      1
+                    )}
+                    % utilized
+                  </p>
+                </div>
+
+                {/* Metrics */}
+                <div className="px-5 pb-5">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-3 border border-blue-100">
+                      <p className="text-xs text-blue-700 font-medium mb-1">
+                        Impressions
+                      </p>
+                      <p className="text-lg font-bold text-blue-900">
+                        {(campaign.impressions / 1000).toFixed(1)}K
+                      </p>
                     </div>
-                    <p className="text-lg font-bold text-gray-900">
-                      {Math.ceil(
-                        (new Date(campaign.endDate).getTime() -
-                          new Date(campaign.startDate).getTime()) /
-                          (1000 * 60 * 60 * 24)
-                      )}{" "}
-                      days
-                    </p>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Campaign period
-                    </p>
+                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-3 border border-purple-100">
+                      <p className="text-xs text-purple-700 font-medium mb-1">
+                        Clicks
+                      </p>
+                      <p className="text-lg font-bold text-purple-900">
+                        {campaign.clicks.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-3 border border-emerald-100">
+                      <p className="text-xs text-emerald-700 font-medium mb-1">
+                        CTR
+                      </p>
+                      <p className="text-lg font-bold text-emerald-900">
+                        {ctr.toFixed(2)}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Video + Regions Section */}
+                <div className="border-t border-gray-100 bg-gray-50 p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Campaign Video */}
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                      <Video className="w-4 h-4 text-purple-600" />
+                      Campaign Video
+                    </h4>
+                    {campaign.videos.length > 0 ? (
+                      <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 hover:border-purple-300 transition-colors">
+                        <div className="bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg p-2">
+                          <Video className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 text-sm truncate">
+                            {campaign.videos[0].name}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {campaign.videos[0].duration}s
+                          </p>
+                        </div>
+                        <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                          <Play className="w-4 h-4 text-gray-600" />
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500 italic">No videos</p>
+                    )}
                   </div>
 
                   {/* Regions */}
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <FiMapPin className="w-4 h-4 text-gray-600" />
-                      <span className="text-xs font-medium text-gray-600">
-                        Locations
-                      </span>
-                    </div>
-                    <p className="text-lg font-bold text-gray-900">
-                      {campaign.regions.length} region
-                      {campaign.regions.length !== 1 ? "s" : ""}
-                    </p>
-                    <p className="text-xs text-gray-600 mt-1 truncate">
-                      {campaign.regions.slice(0, 2).join(", ")}
-                      {campaign.regions.length > 2 &&
-                        ` +${campaign.regions.length - 2}`}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Videos List */}
-                <div className="border-t border-gray-200 pt-4">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                    Campaign Videos
-                  </h4>
-                  <div className="space-y-2">
-                    {campaign.videos.map((video) => (
-                      <div
-                        key={video.id}
-                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                      >
-                        <div className="bg-gradient-to-br from-[#764ba2] to-[#667eea] rounded-lg p-2">
-                          <FiVideo className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 truncate">
-                            {video.name}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            {video.duration} seconds
-                          </p>
-                        </div>
-                        <button className="p-2 rounded-lg hover:bg-white transition-colors">
-                          <FiPlay className="w-5 h-5 text-gray-600" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Regions List */}
-                <div className="border-t border-gray-200 pt-4 mt-4">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                    Target Regions
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {campaign.regions.map((region) => (
-                      <span
-                        key={region}
-                        className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium border border-blue-200"
-                      >
-                        {region}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Performance Stats */}
-                {campaign.status !== "scheduled" && (
-                  <div className="border-t border-gray-200 pt-4 mt-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                      Performance
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-blue-600" />
+                      Target Regions
                     </h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-600 mb-1">
-                          Impressions
-                        </p>
-                        <p className="text-lg font-bold text-gray-900">
-                          {campaign.impressions.toLocaleString()}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600 mb-1">Clicks</p>
-                        <p className="text-lg font-bold text-gray-900">
-                          {campaign.clicks.toLocaleString()}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600 mb-1">CTR</p>
-                        <p className="text-lg font-bold text-gray-900">
-                          {campaign.impressions > 0
-                            ? (
-                                (campaign.clicks / campaign.impressions) *
-                                100
-                              ).toFixed(2)
-                            : 0}
-                          %
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600 mb-1">Cost/Click</p>
-                        <p className="text-lg font-bold text-gray-900">
-                          GHS{" "}
-                          {campaign.clicks > 0
-                            ? (campaign.spent / campaign.clicks).toFixed(2)
-                            : 0}
-                        </p>
-                      </div>
+                    <div className="flex flex-wrap gap-2">
+                      {campaign.regions.map((region) => (
+                        <span
+                          key={region}
+                          className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium border border-blue-200"
+                        >
+                          {region}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                )}
+                </div>
               </div>
-            </div>
-          ))
-        )}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

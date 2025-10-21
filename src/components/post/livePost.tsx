@@ -472,7 +472,9 @@ export function LivePost() {
                         <h3 className="text-lg md:text-xl font-bold text-gray-900 truncate">
                           {extractVideoTitle(campaign.name)}
                         </h3>
-                        <CampaignChip />
+                        <CampaignChip
+                          campaignStatus={campaign.resources[0].status}
+                        />
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
                         <span className="flex items-center gap-1">
@@ -522,7 +524,9 @@ export function LivePost() {
                   {/* Campaign Details Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     {/* Videos */}
-                    <div className="bg-gray-50 rounded-lg p-3">
+                    <div
+                      className={`${colorScheme.bg} border ${colorScheme.border} ${colorScheme.hover} rounded-lg p-3`}
+                    >
                       <div className="flex items-center gap-2 mb-2">
                         <FiVideo className="w-4 h-4 text-gray-600" />
                         <span className="text-xs font-medium text-gray-600">
@@ -539,7 +543,9 @@ export function LivePost() {
                     </div>
 
                     {/* Budget */}
-                    <div className="bg-gray-50 rounded-lg p-3">
+                    <div
+                      className={`${colorScheme.bg} border ${colorScheme.border} ${colorScheme.hover} rounded-lg p-3`}
+                    >
                       <div className="flex items-center gap-2 mb-2">
                         <FiDollarSign className="w-4 h-4 text-gray-600" />
                         <span className="text-xs font-medium text-gray-600">
@@ -569,7 +575,9 @@ export function LivePost() {
                     </div>
 
                     {/* Duration */}
-                    <div className="bg-gray-50 rounded-lg p-3">
+                    <div
+                      className={`${colorScheme.bg} border ${colorScheme.border} ${colorScheme.hover} rounded-lg p-3`}
+                    >
                       <div className="flex items-center gap-2 mb-2">
                         <FiClock className="w-4 h-4 text-gray-600" />
                         <span className="text-xs font-medium text-gray-600">
@@ -590,7 +598,9 @@ export function LivePost() {
                     </div>
 
                     {/* Regions */}
-                    <div className="bg-gray-50 rounded-lg p-3">
+                    <div
+                      className={`${colorScheme.bg} border ${colorScheme.border} ${colorScheme.hover} rounded-lg p-3`}
+                    >
                       <div className="flex items-center gap-2 mb-2">
                         <FiMapPin className="w-4 h-4 text-gray-600" />
                         <span className="text-xs font-medium text-gray-600">
@@ -605,10 +615,10 @@ export function LivePost() {
                   </div>
 
                   {/* Videos List - ACCORDION */}
-                  <div className="border-t border-gray-200 pt-4">
+                  <div className={`border-t border-gray-200 pt-4`}>
                     <button
                       onClick={() => toggleCampaignVideos(campaign.id)}
-                      className="w-full cursor-pointer flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
+                      className={`${colorScheme.bg} border ${colorScheme.border} ${colorScheme.hover} w-full cursor-pointer flex items-center justify-between p-3 rounded-lg  transition-colors group`}
                     >
                       <div className="flex items-center gap-2">
                         <FiVideo
@@ -637,7 +647,7 @@ export function LivePost() {
 
                     {/* Expandable Content */}
                     <div
-                      className={`overflow-hidden transition-all duration-500 ease-in-out ${
+                      className={` overflow-hidden transition-all duration-500 ease-in-out ${
                         expandedCampaigns.has(campaign.id)
                           ? "max-h-[2500px] opacity-100 mt-4"
                           : "max-h-0 opacity-0"
@@ -647,7 +657,7 @@ export function LivePost() {
                         {campaign.resources.map((video: any) => (
                           <div
                             key={video.id}
-                            className="flex flex-col sm:flex-row sm:items-start gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all shadow-sm"
+                            className={` flex flex-col sm:flex-row sm:items-start gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all shadow-sm`}
                           >
                             {/* Thumbnail Section */}
                             <div

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type JSX } from "react";
+import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 import {
   ArrowLeft,
   CheckCircle,
@@ -22,6 +22,8 @@ import { useSocket } from "@/context/SocketContext";
 import SkeletonDemo from "./VideoSkeletonCard";
 import { useNavigate } from "@tanstack/react-router";
 import { formatDate } from "@/helpers/utilFunctions";
+import { cardColors } from "@/components/post/types/interface";
+import Hls from "hls.js";
 
 export function Campaign(): JSX.Element {
   const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null); // Changed to single video ID
@@ -242,6 +244,65 @@ export function Campaign(): JSX.Element {
     }
   }, [publishedVideo, fetchPublisherPosts]);
 
+  const getCardColor = (index: number) => {
+    return cardColors[index % cardColors.length];
+  };
+
+  // Add this state at the top of your component
+  const [isPlaying, setIsPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
+
+  // Add this effect to handle HLS initialization and cleanup
+  useEffect(() => {
+    if (!showVideoDialog || !selectedVideoForDialog?.videoResource?.videoUrl) {
+      // Cleanup when dialog closes
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+      setIsPlaying(false);
+      return;
+    }
+
+    const video = videoRef.current;
+    const videoUrl = selectedVideoForDialog.videoResource.videoUrl;
+
+    if (!video) return;
+
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hlsRef.current = hls;
+      hls.loadSource(videoUrl);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        console.log("HLS manifest loaded");
+      });
+
+      hls.on(Hls.Events.ERROR, (__, data) => {
+        console.error("HLS error:", data);
+      });
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      // Native HLS support (Safari)
+      video.src = videoUrl;
+    }
+
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, [showVideoDialog, selectedVideoForDialog]);
+
+  const handlePlayVideo = () => {
+    if (videoRef.current) {
+      videoRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-purple-50/30 to-gray-100">
       {/* Header */}
@@ -385,81 +446,85 @@ export function Campaign(): JSX.Element {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                  {filteredVideos.map((video) => (
-                    <div
-                      key={video.id}
-                      className={`group bg-white rounded-xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:-translate-y-1 cursor-pointer ${
-                        selectedVideoId === video.id
-                          ? "ring-2 ring-purple-500 shadow-xl scale-[1.02]"
-                          : ""
-                      }`}
-                    >
-                      {/* Video Thumbnail */}
+                  {filteredVideos.map((video, index) => {
+                    const colorScheme = getCardColor(index);
+
+                    return (
                       <div
-                        className="relative"
-                        onClick={() => handleVideoClick(video)}
+                        key={video.id}
+                        className={`group ${colorScheme.bg} border ${colorScheme.border} ${colorScheme.hover} rounded-xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:-translate-y-1 cursor-pointer ${
+                          selectedVideoId === video.id
+                            ? "ring-2 ring-purple-500 shadow-xl scale-[1.02]"
+                            : ""
+                        }`}
                       >
-                        <div className="aspect-video bg-gradient-to-br from-gray-200 to-gray-300 overflow-hidden relative">
-                          <img
-                            src={video.imgResource.imageUrl}
-                            alt={video.resourceTitle}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          />
+                        {/* Video Thumbnail */}
+                        <div
+                          className="relative"
+                          onClick={() => handleVideoClick(video)}
+                        >
+                          <div className="aspect-video bg-gradient-to-br from-gray-200 to-gray-300 overflow-hidden relative">
+                            <img
+                              src={video.imgResource.imageUrl}
+                              alt={video.resourceTitle}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            />
 
-                          {/* Dark overlay on hover */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            {/* Dark overlay on hover */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                          {/* Play button overlay */}
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-                            <div className="w-16 h-16 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-xl transform scale-75 group-hover:scale-100 transition-all duration-300">
-                              <Play
-                                className="w-7 h-7 text-purple-600 ml-1"
-                                fill="currentColor"
-                              />
+                            {/* Play button overlay */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                              <div className="w-16 h-16 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-xl transform scale-75 group-hover:scale-100 transition-all duration-300">
+                                <Play
+                                  className="w-7 h-7 text-purple-600 ml-1"
+                                  fill="currentColor"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Duration badge */}
+                            <div className="absolute bottom-2 right-2 bg-black/90 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-md flex items-center space-x-1 font-medium">
+                              <Clock className="w-3 h-3" />
+                              <span>{video.videoResource.VideoLength}</span>
+                            </div>
+
+                            {/* Selection checkbox */}
+                            <div className="absolute top-2 right-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleVideoSelection(video.id);
+                                }}
+                                className="relative"
+                              >
+                                {selectedVideoId === video.id ? (
+                                  <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center shadow-lg">
+                                    <CheckCircle className="w-5 h-5 text-white" />
+                                  </div>
+                                ) : (
+                                  <div className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-lg border-2 border-white/70 opacity-80 group-hover:opacity-100 transition-opacity duration-300" />
+                                )}
+                              </button>
                             </div>
                           </div>
+                        </div>
 
-                          {/* Duration badge */}
-                          <div className="absolute bottom-2 right-2 bg-black/90 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-md flex items-center space-x-1 font-medium">
-                            <Clock className="w-3 h-3" />
-                            <span>{video.videoResource.VideoLength}</span>
-                          </div>
-
-                          {/* Selection checkbox */}
-                          <div className="absolute top-2 right-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleVideoSelection(video.id);
-                              }}
-                              className="relative"
-                            >
-                              {selectedVideoId === video.id ? (
-                                <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center shadow-lg">
-                                  <CheckCircle className="w-5 h-5 text-white" />
-                                </div>
-                              ) : (
-                                <div className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-lg border-2 border-white/70 opacity-80 group-hover:opacity-100 transition-opacity duration-300" />
-                              )}
-                            </button>
-                          </div>
+                        {/* Video Info */}
+                        <div
+                          className="p-4"
+                          onClick={() => toggleVideoSelection(video.id)}
+                        >
+                          <h3 className="font-semibold text-gray-900 text-sm line-clamp-2 leading-tight mb-2 group-hover:text-purple-700 transition-colors duration-200">
+                            {video.resourceTitle}
+                          </h3>
+                          <p className="text-xs text-gray-500">
+                            Uploaded {formatDate(video.updatedAt)}
+                          </p>
                         </div>
                       </div>
-
-                      {/* Video Info */}
-                      <div
-                        className="p-4"
-                        onClick={() => toggleVideoSelection(video.id)}
-                      >
-                        <h3 className="font-semibold text-gray-900 text-sm line-clamp-2 leading-tight mb-2 group-hover:text-purple-700 transition-colors duration-200">
-                          {video.resourceTitle}
-                        </h3>
-                        <p className="text-xs text-gray-500">
-                          Uploaded {formatDate(video.updatedAt)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -467,7 +532,6 @@ export function Campaign(): JSX.Element {
         </div>
       </div>
 
-      {/* Video Preview Dialog */}
       {showVideoDialog && selectedVideoForDialog && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-2xl">
@@ -487,19 +551,29 @@ export function Campaign(): JSX.Element {
             {/* Video Display */}
             <div className="p-6">
               <div className="aspect-video bg-gray-900 rounded-xl mb-4 overflow-hidden relative group">
-                <img
-                  src={selectedVideoForDialog.imgResource.imageUrl}
-                  alt={selectedVideoForDialog.resourceTitle}
+                {/* Video Element */}
+                <video
+                  ref={videoRef}
                   className="w-full h-full object-cover"
+                  controls={isPlaying}
+                  playsInline
+                  poster={selectedVideoForDialog.imgResource.imageUrl}
                 />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-20 h-20 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-xl">
-                    <Play
-                      className="w-10 h-10 text-purple-600 ml-1"
-                      fill="currentColor"
-                    />
+
+                {/* Play Button Overlay - only show when not playing */}
+                {!isPlaying && (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center cursor-pointer"
+                    onClick={handlePlayVideo}
+                  >
+                    <div className="w-20 h-20 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-xl transition-transform hover:scale-110">
+                      <Play
+                        className="w-10 h-10 text-purple-600 ml-1"
+                        fill="currentColor"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <h4 className="font-semibold text-gray-900 text-lg mb-2">

@@ -278,7 +278,7 @@ export function LivePost() {
         return;
       }
 
-      const newStatus = currentPost.status === "private" ? "public" : "private";
+      const newStatus = currentPost.status === "PRIVATE" ? "PUBLIC" : "PRIVATE";
 
       await ApiService.put_api(`/resources/publisher/${postId}/update`, {
         status: newStatus,
@@ -808,7 +808,7 @@ export function LivePost() {
                                   onClick={() => togglePrivacy(video.id)}
                                   disabled={updatingPrivacyPostId === video.id}
                                   className={`flex cursor-pointer items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                                    video.status === "private"
+                                    video.status === "PRIVATE"
                                       ? "bg-green-50 text-green-700 border border-green-200 hover:bg-green-100"
                                       : "bg-red-50 text-red-700 border border-red-200 hover:bg-red-100"
                                   }`}
@@ -818,7 +818,7 @@ export function LivePost() {
                                       <Loader2 className="w-3 h-3 animate-spin" />
                                       <span>Updating...</span>
                                     </>
-                                  ) : video.status === "private" ? (
+                                  ) : video.status === "PRIVATE" ? (
                                     <>
                                       <Globe className="w-3 h-3" />
                                       <span>Make Public</span>
@@ -833,15 +833,15 @@ export function LivePost() {
 
                                 <button
                                   onClick={() => handleEditClick(video)}
-                                  disabled={video.status === "public"}
+                                  disabled={video.status === "PUBLIC"}
                                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                                    video.status === "public"
+                                    video.status === "PUBLIC"
                                       ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed opacity-60"
                                       : "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 cursor-pointer"
                                   }`}
                                   title={
-                                    video.status === "public"
-                                      ? "Cannot edit public videos"
+                                    video.status === "PUBLIC"
+                                      ? "Cannot edit PUBLIC videos"
                                       : "Edit video"
                                   }
                                 >

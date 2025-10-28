@@ -5,7 +5,7 @@ export const CampaignChip = ({
 }: {
   campaignStatus: string;
 }) => {
-  const isPublic = campaignStatus === "public";
+  const isPublic = campaignStatus === "PUBLIC";
 
   return (
     <div className="flex items-center">

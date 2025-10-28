@@ -434,15 +434,15 @@ export function Campaign(): JSX.Element {
 
               {filteredVideos.length === 0 ? (
                 <div className="text-center py-16">
-                  <div className="w-20 h-20 mx-auto bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center mb-4">
+                  {/* <div className="w-20 h-20 mx-auto bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center mb-4">
                     <Search className="w-10 h-10 text-purple-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  </div> */}
+                  {/* <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     No videos found
-                  </h3>
-                  <p className="text-gray-600">
+                  </h3> */}
+                  {/* <p className="text-gray-600">
                     Try adjusting your search terms
-                  </p>
+                  </p> */}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
